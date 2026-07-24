@@ -1,0 +1,6 @@
+{
+  "name": "BandDan",
+  "description": "Real-time hand gesture chord director and listener display for bands using WebRTC and local QR pairing.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
