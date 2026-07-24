@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { RTC_CONFIG, decompressSDP, compressSDP, waitForIceGathering } from '../utils/webrtc';
 import { WebRTCMessage, ConnectionStatus } from '../types';
+import { playChordSound } from '../utils/audio';
 import { 
   Smartphone, 
   Camera, 
@@ -13,7 +14,9 @@ import {
   RefreshCw, 
   Radio, 
   LogOut,
-  Sparkles
+  Sparkles,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 export default function ListenerView() {
@@ -21,6 +24,20 @@ export default function ListenerView() {
   const [displayName, setDisplayName] = useState<string>(() => {
     return localStorage.getItem('banddan_display_name') || 'Keys';
   });
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('banddan_listener_sound_enabled') === 'true';
+  });
+
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('banddan_listener_sound_enabled', String(newValue));
+  };
+
+  const soundEnabledRef = useRef<boolean>(soundEnabled);
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   // Pairing States
   const [pairingStep, setPairingStep] = useState<'name_entry' | 'scanning_conductor' | 'generating_answer' | 'show_answer_qr' | 'listening'>('name_entry');
@@ -166,6 +183,10 @@ export default function ListenerView() {
               setActiveChord(parsed.value);
               setLastUpdateTime(parsed.ts || Date.now());
               
+              if (soundEnabledRef.current && parsed.value && parsed.value !== '—') {
+                playChordSound(parsed.value);
+              }
+
               // Trigger physical vibration
               if ('vibrate' in navigator) {
                 try {
@@ -267,26 +288,17 @@ export default function ListenerView() {
 
       {/* 1. Name Entry & Setup */}
       {pairingStep === 'name_entry' && (
-        <div id="listener_setup_card" className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full gap-6 relative z-10">
-          <div className="text-center flex flex-col items-center gap-3">
-            <div className="bg-white/5 border border-white/10 p-4.5 rounded-2xl shadow-xl backdrop-blur-md">
-              <Smartphone className="w-10 h-10 text-[#00FF41]" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-extrabold tracking-tighter text-white uppercase select-none">
-                JOIN AS <span className="text-[#00FF41] drop-shadow-[0_0_12px_rgba(0,255,65,0.3)]">LISTENER</span>
-              </h1>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-[#8E9299] max-w-[280px] mt-1.5 leading-relaxed">
-                RECEIVE VISUAL CHORDS & HAPTIC VIBRATIONS DIRECTLY FROM CONDUCTOR
-              </p>
-            </div>
+        <div id="listener_setup_card" className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full gap-4 relative z-10">
+          <div className="text-center flex flex-col items-center">
+            <h1 className="text-2xl font-black tracking-tighter text-white uppercase select-none">
+              JOIN <span className="text-[#00FF41]">BAND</span>
+            </h1>
           </div>
 
-          <div className="w-full bg-white/[0.02] backdrop-blur-md border border-white/10 p-6 rounded-2xl flex flex-col gap-4.5 shadow-2xl relative">
-            <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="displayName" className="text-4xs font-mono font-bold uppercase tracking-widest text-[#8E9299] select-none">
-                Instrument / Member Name
+          <div className="w-full bg-white/[0.02] backdrop-blur-md border border-white/5 p-4 rounded-xl flex flex-col gap-3 shadow-2xl relative">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="displayName" className="text-4xs font-mono font-bold uppercase tracking-widest text-zinc-500 select-none">
+                INSTRUMENT / YOUR NAME
               </label>
               <input
                 id="displayName"
@@ -295,46 +307,41 @@ export default function ListenerView() {
                 maxLength={16}
                 value={displayName}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full bg-[#050508]/60 border border-white/10 focus:border-[#00FF41] rounded-xl px-4 py-3 text-sm font-mono font-bold text-[#00FF41] placeholder-zinc-700 focus:outline-hidden uppercase tracking-wide transition-all"
+                className="w-full bg-black/40 border border-white/5 focus:border-[#00FF41] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF41] placeholder-zinc-800 focus:outline-hidden uppercase tracking-wide transition-all"
               />
             </div>
 
             <button
               onClick={startConductorScanner}
               disabled={!displayName.trim()}
-              className="w-full py-3.5 bg-[#00FF41] hover:bg-[#22ff5a] disabled:bg-[#12121A]/50 disabled:text-zinc-650 disabled:border-white/5 disabled:shadow-none active:scale-97 text-black text-xs font-mono font-bold rounded-xl shadow-[0_4px_16px_rgba(0,255,65,0.2)] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+              className="w-full py-2.5 bg-[#00FF41] hover:bg-[#22ff5a] disabled:bg-white/5 disabled:text-zinc-600 disabled:shadow-none text-black text-2xs font-mono font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer uppercase tracking-wider"
             >
-              <Camera className="w-4 h-4" />
               <span>SCAN CONDUCTOR QR</span>
             </button>
 
-            <div className="flex items-center gap-2 my-1">
-              <div className="flex-1 h-[1px] bg-white/10" />
-              <span className="text-[9px] font-mono text-[#8E9299] uppercase tracking-wider">OR ENTER MANUALLY</span>
-              <div className="flex-1 h-[1px] bg-white/10" />
+            <div className="flex items-center gap-1.5 my-0.5">
+              <div className="flex-1 h-[1px] bg-white/5" />
+              <span className="text-4xs font-mono text-zinc-650 uppercase tracking-wider">OR PASTE</span>
+              <div className="flex-1 h-[1px] bg-white/5" />
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <textarea
-                placeholder="PASTE CONDUCTOR'S CONNECTION CODE HERE..."
-                rows={3}
+                placeholder="PASTE CODE HERE..."
+                rows={1}
                 disabled={!displayName.trim()}
-                className="w-full bg-[#050508]/60 border border-white/10 focus:border-[#00FF41] rounded-xl px-3.5 py-2.5 text-[10px] font-mono text-[#00FF41] placeholder-zinc-700 focus:outline-hidden uppercase tracking-wide transition-all resize-none"
+                className="w-full bg-black/40 border border-white/5 focus:border-[#00FF41] rounded-lg px-2.5 py-1.5 text-[9px] font-mono text-[#00FF41] placeholder-zinc-800 focus:outline-hidden uppercase tracking-wide transition-all resize-none"
                 value={manualOfferInput}
                 onChange={(e) => setManualOfferInput(e.target.value)}
               />
               <button
                 onClick={handleManualOfferSubmit}
                 disabled={!displayName.trim() || !manualOfferInput.trim()}
-                className="w-full py-2.5 bg-white/5 hover:bg-white/10 disabled:bg-transparent disabled:text-zinc-750 active:scale-97 text-zinc-300 hover:text-white text-3xs font-mono font-bold rounded-xl border border-white/10 hover:border-[#00FF41]/40 transition-all duration-200 uppercase tracking-widest cursor-pointer"
+                className="w-full py-1.5 bg-white/5 hover:bg-white/10 disabled:bg-transparent disabled:text-zinc-800 active:scale-97 text-zinc-400 hover:text-white text-4xs font-mono font-bold rounded-lg border border-white/5 hover:border-[#00FF41]/40 transition-all duration-200 uppercase tracking-widest cursor-pointer"
               >
                 CONNECT WITH CODE
               </button>
             </div>
-          </div>
-
-          <div className="text-4xs text-zinc-650 font-mono text-center max-w-xs uppercase tracking-wider leading-relaxed">
-            * Peer connection works directly over local Wi-Fi / Hotspot. No cellular internet required.
           </div>
         </div>
       )}
@@ -348,13 +355,21 @@ export default function ListenerView() {
           </div>
 
           {/* QR Scanner Holder */}
-          <div className="w-full aspect-square bg-[#050508] border-2 border-[#2D2D3F] rounded-lg overflow-hidden relative flex items-center justify-center">
+          <div className="w-full aspect-square max-w-[280px] rounded-3xl overflow-hidden border border-white/10 bg-[#050508]/60 relative flex items-center justify-center shadow-[0_0_24px_rgba(0,255,65,0.15)]">
             {scannerActive ? (
               <div id="conductor-reader" className="w-full h-full" />
             ) : (
               <span className="text-3xs text-[#8E9299] font-mono uppercase">Initializing camera...</span>
             )}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-[#00FF41]/60 pointer-events-none animate-pulse" />
+            {/* Focus Overlay Reticle */}
+            <div className="absolute inset-5 border border-dashed border-[#00FF41]/40 rounded-2xl pointer-events-none flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-[#00FF41] rounded-full animate-ping" />
+              {/* Corner Accents */}
+              <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#00FF41] rounded-tl-lg" />
+              <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#00FF41] rounded-tr-lg" />
+              <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#00FF41] rounded-bl-lg" />
+              <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#00FF41] rounded-br-lg" />
+            </div>
           </div>
 
           {pairingError && (
@@ -384,19 +399,16 @@ export default function ListenerView() {
 
       {/* 4. Show Answer QR Code */}
       {pairingStep === 'show_answer_qr' && (
-        <div id="listener_show_answer_card" className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full gap-6">
-          <div className="text-center flex flex-col items-center gap-1.5">
-            <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#00FF41] font-mono">Pairing Step 2</h2>
-            <p className="text-xs text-zinc-200 font-mono uppercase tracking-wide">Show this QR back to the Conductor</p>
-            <p className="text-4xs text-[#8E9299] font-mono max-w-[260px] uppercase tracking-wider mt-1.5 leading-relaxed">
-              The Conductor must scan this code using their screen scanner to activate peer broadcast.
-            </p>
+        <div id="listener_show_answer_card" className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full gap-4">
+          <div className="text-center flex flex-col items-center">
+            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">Pairing Step 2</h2>
+            <p className="text-sm font-bold text-white uppercase tracking-wide">Show QR to Conductor</p>
           </div>
 
-          <div className="bg-white p-4.5 rounded-2xl shadow-2xl border border-white/10">
+          <div className="bg-white p-3 rounded-xl shadow-2xl border border-white/10">
             <QRCodeSVG
               value={answerQRValue}
-              size={240}
+              size={180}
               level="L"
               includeMargin={false}
             />
@@ -404,25 +416,25 @@ export default function ListenerView() {
 
           <button
             onClick={copyAnswerToClipboard}
-            className={`w-full py-2.5 border transition-all duration-200 text-3xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
+            className={`w-full py-2 border transition-all duration-200 text-3xs font-mono font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider ${
               copiedAnswer
                 ? 'border-[#00FF41] bg-[#00FF41]/15 text-[#00FF41]'
                 : 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
             }`}
           >
-            {copiedAnswer ? 'ANSWER COPIED!' : 'COPY ANSWER CODE'}
+            {copiedAnswer ? 'COPIED!' : 'COPY CODE'}
           </button>
 
-          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-[#12121A] border border-white/5 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold text-zinc-400">
-            <RefreshCw className="w-3 h-3 animate-spin text-[#00FF41]" />
-            <span>Awaiting peer verification...</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#12121A] border border-white/5 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold text-zinc-400">
+            <RefreshCw className="w-2.5 h-2.5 animate-spin text-[#00FF41]" />
+            <span>Awaiting verification...</span>
           </div>
 
           <button
             onClick={disconnectAndReset}
-            className="px-4 py-2.5 bg-[#FF4444]/15 border border-[#FF4444]/25 hover:bg-[#FF4444]/25 text-xs font-mono font-bold rounded-xl transition cursor-pointer uppercase tracking-wider"
+            className="px-3 py-1.5 text-zinc-400 hover:text-white text-3xs font-mono font-bold rounded-xl transition cursor-pointer uppercase tracking-wider"
           >
-            Cancel & Disconnect
+            Cancel
           </button>
         </div>
       )}
@@ -440,18 +452,42 @@ export default function ListenerView() {
               <div className="text-xs">
                 <span className="font-mono font-bold text-white uppercase tracking-wide">{displayName}</span>
                 <span className="text-[#8E9299] text-4xs block uppercase tracking-widest font-mono mt-0.5">
-                  {connectionStatus === 'connected' ? 'P2P CHORD CHANNEL' : 'DISCONNECTED'}
+                  {connectionStatus === 'connected' ? 'CONNECTED' : 'DISCONNECTED'}
                 </span>
               </div>
             </div>
 
-            <button
-              onClick={disconnectAndReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FF4444]/15 border border-[#FF4444]/35 text-[#FF4444] hover:bg-[#FF4444]/25 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold transition cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Leave</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleSound}
+                className={`flex items-center gap-1 px-2 py-1 border rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider cursor-pointer transition-all duration-200 ${
+                  soundEnabled
+                    ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41]'
+                    : 'border-white/5 bg-white/5 text-zinc-400 hover:text-white'
+                }`}
+                title={soundEnabled ? 'Disable Synth' : 'Enable Synth'}
+              >
+                {soundEnabled ? (
+                  <>
+                    <Volume2 className="w-3 h-3 text-[#00FF41]" />
+                    <span className="hidden xs:inline">SOUND ON</span>
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="w-3 h-3 text-zinc-500" />
+                    <span className="hidden xs:inline">SOUND OFF</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={disconnectAndReset}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FF4444]/15 border border-[#FF4444]/35 text-[#FF4444] hover:bg-[#FF4444]/25 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold transition cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Leave</span>
+              </button>
+            </div>
           </div>
 
           {/* Huge, absolute high contrast display occupying maximum space */}
@@ -469,8 +505,8 @@ export default function ListenerView() {
           </div>
 
           {/* Bottom quick indicator */}
-          <div className="border-t border-[#2D2D3F] pt-3 text-center text-4xs text-zinc-500 font-mono uppercase tracking-widest leading-normal">
-            * Keep screen active. Device will haptic-vibrate on each transition.
+          <div className="border-t border-white/5 pt-2.5 text-center text-4xs text-zinc-600 font-mono uppercase tracking-widest leading-none">
+            * Keep screen awake • Vibrates on change
           </div>
 
         </div>

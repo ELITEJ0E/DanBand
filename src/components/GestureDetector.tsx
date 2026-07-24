@@ -18,6 +18,7 @@ export default function GestureDetector({ onGestureTriggered, activeChord }: Ges
   const [loadingProgress, setLoadingProgress] = useState<string>('Initializing vision tasks...');
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
   
   const [diagnostic, setDiagnostic] = useState<GestureDiagnostic | null>(null);
   const [rawGesture, setRawGesture] = useState<GestureType>('none');
@@ -311,15 +312,15 @@ export default function GestureDetector({ onGestureTriggered, activeChord }: Ges
         <div className="p-3.5 bg-black/20 flex items-center justify-between border-b border-white/5">
           <div className="flex items-center gap-2 text-zinc-300 text-xs font-mono font-bold uppercase tracking-wider">
             <Camera className="w-4 h-4 text-[#00FF41]" />
-            <span>CONDUCTOR FEED v1.2</span>
+            <span>CONDUCTOR FEED</span>
           </div>
           <button
             onClick={toggleCamera}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white/5 hover:bg-white/10 active:scale-95 text-3xs text-zinc-200 font-mono font-bold uppercase tracking-widest rounded-xl border border-white/10 hover:border-[#00FF41]/40 transition-all duration-200 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 active:scale-95 text-3xs text-zinc-200 font-mono font-bold uppercase tracking-widest rounded-lg border border-white/10 hover:border-[#00FF41]/40 transition-all duration-200 cursor-pointer"
             title="Toggle camera front/rear"
           >
-            <RefreshCw className="w-3 h-3 text-[#00FF41]" />
-            <span>{cameraFacing === 'user' ? 'FRONT CAM' : 'REAR CAM'}</span>
+            <RefreshCw className="w-2.5 h-2.5 text-[#00FF41]" />
+            <span>{cameraFacing === 'user' ? 'FRONT' : 'REAR'}</span>
           </button>
         </div>
 
@@ -358,107 +359,117 @@ export default function GestureDetector({ onGestureTriggered, activeChord }: Ges
       </div>
 
       {/* Diagnostics / Mapping Status */}
-      <div className="w-full lg:w-80 flex flex-col gap-4">
+      <div className="w-full lg:w-80 flex flex-col gap-3">
         {/* Active Gesture & Chord Block */}
-        <div className="p-4.5 bg-white/[0.02] backdrop-blur-md border border-white/5 rounded-2xl shadow-lg flex flex-col gap-3 relative">
+        <div className="p-4 bg-white/[0.02] backdrop-blur-md border border-white/5 rounded-2xl shadow-lg flex flex-col gap-2.5 relative">
           <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <span className="text-[#8E9299] text-3xs font-mono font-bold uppercase tracking-wider">Detected Gesture</span>
-          <div className="flex items-center gap-3">
-            <div className="text-3xl bg-black/40 p-2.5 rounded-xl border border-white/5 min-w-[3.5rem] text-center shadow-inner">
+          <span className="text-[#8E9299] text-4xs font-mono font-bold uppercase tracking-wider">Detected Gesture</span>
+          <div className="flex items-center gap-2.5">
+            <div className="text-2xl bg-black/40 p-2 rounded-xl border border-white/5 min-w-[3rem] text-center shadow-inner">
               {activeGestureDetails?.emoji || '❓'}
             </div>
             <div>
-              <div className="font-mono font-bold text-sm text-white uppercase tracking-wide">{activeGestureDetails?.name || 'NO GESTURE'}</div>
-              <div className="text-[#8E9299] text-[10px] font-mono leading-tight mt-0.5">{activeGestureDetails?.description || 'ALIGN HAND TO PRESETS'}</div>
+              <div className="font-mono font-bold text-xs text-white uppercase tracking-wide">{activeGestureDetails?.name || 'NO GESTURE'}</div>
+              <div className="text-[#8E9299] text-[9px] font-mono leading-tight mt-0.5">{activeGestureDetails?.description || 'ALIGN HAND TO PRESETS'}</div>
             </div>
           </div>
 
-          <div className="border-t border-white/5 pt-3 mt-1 flex items-center justify-between">
+          <div className="border-t border-white/5 pt-2.5 mt-0.5 flex items-center justify-between">
             <div>
               <span className="text-[#8E9299] text-4xs font-mono uppercase tracking-wider block">Active broadcast</span>
-              <span className="font-mono text-[#00FF41] font-bold text-2xl tracking-tighter uppercase drop-shadow-[0_0_10px_rgba(0,255,65,0.25)]">{activeChord}</span>
+              <span className="font-mono text-[#00FF41] font-bold text-xl tracking-tighter uppercase drop-shadow-[0_0_10px_rgba(0,255,65,0.25)]">{activeChord}</span>
             </div>
             {debouncedGesture !== 'none' ? (
-              <span className="bg-[#00FF41]/15 text-[#00FF41] border border-[#00FF41]/30 text-4xs px-2.5 py-1 rounded-full font-mono font-bold uppercase tracking-widest flex items-center gap-1 shadow-sm">
-                <CheckCircle className="w-3 h-3" />
+              <span className="bg-[#00FF41]/15 text-[#00FF41] border border-[#00FF41]/30 text-4xs px-2 py-0.5 rounded-full font-mono font-bold uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                <CheckCircle className="w-2.5 h-2.5" />
                 HELD
               </span>
             ) : (
-              <span className="bg-white/5 text-zinc-500 border border-white/5 text-4xs px-2.5 py-1 rounded-full font-mono uppercase tracking-widest">
+              <span className="bg-white/5 text-zinc-500 border border-white/5 text-4xs px-2 py-0.5 rounded-full font-mono uppercase tracking-widest">
                 WAITING
               </span>
             )}
           </div>
         </div>
 
-        {/* Live Calibration Dashboard */}
-        <div className="p-4.5 bg-white/[0.01] backdrop-blur-md border border-white/5 rounded-2xl flex flex-col gap-3 relative">
-          <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          <span className="text-white text-2xs font-mono font-bold uppercase tracking-widest flex items-center gap-1.5 select-none">
-            <span className="w-2 h-2 rounded-full bg-[#00FF41] animate-pulse" />
-            CALIBRATION DIAGNOSTICS
-          </span>
-          
-          <div className="text-xs space-y-2 text-zinc-300">
-            <div className="flex justify-between items-center bg-black/20 border border-white/5 px-2.5 py-2 rounded-xl text-3xs font-mono uppercase tracking-wider">
-              <span>Finger tracking:</span>
-              <span className={diagnostic ? 'text-[#00FF41] font-bold' : 'text-zinc-600'}>
-                {diagnostic ? 'STREAM_ACTIVE' : 'OFFLINE'}
-              </span>
-            </div>
+        {/* Toggle Diagnostics Button */}
+        <button
+          onClick={() => setShowDiagnostics(!showDiagnostics)}
+          className="w-full py-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-4xs font-mono font-bold uppercase tracking-widest rounded-xl border border-white/10 transition-all duration-200 cursor-pointer active:scale-98"
+        >
+          {showDiagnostics ? '▲ HIDE SYSTEM DIAGNOSTICS' : '▼ SHOW CALIBRATION TOOLS'}
+        </button>
 
-            <div className="pt-1.5 pb-0.5 font-mono font-bold text-4xs text-[#8E9299] uppercase tracking-widest">Extension Matrix</div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {[
-                { label: 'Thumb', active: diagnostic?.thumb },
-                { label: 'Index', active: diagnostic?.index },
-                { label: 'Middle', active: diagnostic?.middle },
-                { label: 'Ring', active: diagnostic?.ring },
-                { label: 'Pinky', active: diagnostic?.pinky },
-              ].map((finger) => (
+        {/* Live Calibration Dashboard */}
+        {showDiagnostics && (
+          <div className="p-4 bg-white/[0.01] backdrop-blur-md border border-white/5 rounded-2xl flex flex-col gap-2.5 relative animate-fade-in">
+            <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            <span className="text-white text-4xs font-mono font-bold uppercase tracking-widest flex items-center gap-1 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00FF41] animate-pulse" />
+              CALIBRATION DIAGNOSTICS
+            </span>
+            
+            <div className="text-xs space-y-2 text-zinc-300">
+              <div className="flex justify-between items-center bg-black/20 border border-white/5 px-2 py-1.5 rounded-xl text-[9px] font-mono uppercase tracking-wider">
+                <span>Finger tracking:</span>
+                <span className={diagnostic ? 'text-[#00FF41] font-bold' : 'text-zinc-600'}>
+                  {diagnostic ? 'ACTIVE' : 'OFFLINE'}
+                </span>
+              </div>
+
+              <div className="pt-1 font-mono font-bold text-4xs text-[#8E9299] uppercase tracking-widest">Extension Matrix</div>
+              <div className="grid grid-cols-2 gap-1">
+                {[
+                  { label: 'Thumb', active: diagnostic?.thumb },
+                  { label: 'Index', active: diagnostic?.index },
+                  { label: 'Middle', active: diagnostic?.middle },
+                  { label: 'Ring', active: diagnostic?.ring },
+                  { label: 'Pinky', active: diagnostic?.pinky },
+                ].map((finger) => (
+                  <div 
+                    key={finger.label} 
+                    className={`flex justify-between items-center px-2 py-1 rounded-lg border text-[8px] font-mono transition ${
+                      finger.active 
+                        ? 'bg-[#00FF41]/10 border-[#00FF41]/35 text-[#00FF41]' 
+                        : 'bg-white/[0.02] border-white/5 text-zinc-600'
+                    }`}
+                  >
+                    <span className="uppercase">{finger.label}</span>
+                    <span className="font-bold">{finger.active ? 'EXT' : 'FOLD'}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-1.5 font-mono font-bold text-4xs text-[#8E9299] uppercase tracking-widest">Palm orientation</div>
+              <div className="grid grid-cols-2 gap-1">
                 <div 
-                  key={finger.label} 
-                  className={`flex justify-between items-center px-2 py-1.5 rounded-lg border text-4xs font-mono transition ${
-                    finger.active 
+                  className={`flex justify-between items-center px-2 py-1 rounded-lg border text-[8px] font-mono ${
+                    diagnostic?.isUpright 
                       ? 'bg-[#00FF41]/10 border-[#00FF41]/35 text-[#00FF41]' 
                       : 'bg-white/[0.02] border-white/5 text-zinc-600'
                   }`}
                 >
-                  <span className="uppercase">{finger.label}</span>
-                  <span className="font-bold">{finger.active ? 'EXT' : 'FOLD'}</span>
+                  <span>UPRIGHT</span>
+                  <span className="font-bold">{diagnostic?.isUpright ? 'YES' : 'NO'}</span>
                 </div>
-              ))}
-            </div>
-
-            <div className="pt-2 pb-0.5 font-mono font-bold text-4xs text-[#8E9299] uppercase tracking-widest">Palm orientation</div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <div 
-                className={`flex justify-between items-center px-2 py-1.5 rounded-lg border text-4xs font-mono ${
-                  diagnostic?.isUpright 
-                    ? 'bg-[#00FF41]/10 border-[#00FF41]/35 text-[#00FF41]' 
-                    : 'bg-white/[0.02] border-white/5 text-zinc-600'
-                }`}
-              >
-                <span>UPRIGHT</span>
-                <span className="font-bold">{diagnostic?.isUpright ? 'YES' : 'NO'}</span>
+                <div 
+                  className={`flex justify-between items-center px-2 py-1 rounded-lg border text-[8px] font-mono ${
+                    diagnostic?.isSideways 
+                      ? 'bg-amber-500/10 border-amber-500/35 text-amber-500' 
+                      : 'bg-white/[0.02] border-white/5 text-zinc-600'
+                  }`}
+                >
+                  <span>SIDEWAYS</span>
+                  <span className="font-bold">{diagnostic?.isSideways ? 'YES' : 'NO'}</span>
+                </div>
               </div>
-              <div 
-                className={`flex justify-between items-center px-2 py-1.5 rounded-lg border text-4xs font-mono ${
-                  diagnostic?.isSideways 
-                    ? 'bg-amber-500/10 border-amber-500/35 text-amber-500' 
-                    : 'bg-white/[0.02] border-white/5 text-zinc-600'
-                }`}
-              >
-                <span>SIDEWAYS</span>
-                <span className="font-bold">{diagnostic?.isSideways ? 'YES' : 'NO'}</span>
-              </div>
-            </div>
 
-            <div className="mt-3 text-4xs text-zinc-550 font-mono uppercase tracking-wider leading-relaxed text-center select-none">
-              * KEEP HAND FLAT FACING CAMERA • HOLD GESTURE STEADY FOR 300MS TO TRANSMIT
+              <div className="mt-2 text-[8px] text-zinc-500 font-mono uppercase tracking-wider leading-relaxed text-center select-none">
+                * HOLD GESTURE STEADY FOR 300MS TO TRANSMIT
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { RTC_CONFIG, compressSDP, decompressSDP, waitForIceGathering } from '../utils/webrtc';
 import { loadActivePresetId, loadPresets } from '../utils/presets';
+import { playChordSound } from '../utils/audio';
 import GestureDetector from './GestureDetector';
 import ChordMappingSettings from './ChordMappingSettings';
 import { 
@@ -27,7 +28,8 @@ import {
   AlertCircle, 
   Camera, 
   RotateCcw,
-  Volume2
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 export default function ConductorView() {
@@ -42,6 +44,15 @@ export default function ConductorView() {
   const [connections, setConnections] = useState<ListenerConnection[]>([]);
   const [activeChord, setActiveChord] = useState<string>('—');
   const [lastBroadcastTime, setLastBroadcastTime] = useState<number>(0);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('banddan_sound_enabled') === 'true';
+  });
+
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('banddan_sound_enabled', String(newValue));
+  };
 
   // Pairing workflow states
   const [pairingStep, setPairingStep] = useState<'idle' | 'generating_offer' | 'show_offer_qr' | 'scanning_answer'>('idle');
@@ -92,6 +103,10 @@ export default function ConductorView() {
     setActiveChord(chord);
     const ts = Date.now();
     setLastBroadcastTime(ts);
+
+    if (soundEnabled && chord && chord !== '—') {
+      playChordSound(chord);
+    }
 
     const msg: WebRTCMessage = {
       type: 'chord',
@@ -342,63 +357,79 @@ export default function ConductorView() {
       <div className="absolute bottom-20 left-10 w-[40%] aspect-square rounded-full bg-[#3B82F6]/3 blur-[120px] pointer-events-none" />
 
       {/* Specialist Hardware Telemetry Header */}
-      <div className="w-full border-b border-white/5 bg-black/40 backdrop-blur-md px-4 py-4 md:px-6 sticky top-0 z-30 shadow-md">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#00FF41] animate-ping shrink-0" />
-            <h1 className="text-xl md:text-2xl font-extrabold tracking-tighter text-white uppercase select-none">
-              BAND<span className="text-[#00FF41] drop-shadow-[0_0_12px_rgba(0,255,65,0.35)]">DAN</span>
+      <div className="w-full border-b border-white/5 bg-black/40 backdrop-blur-md px-4 py-3 sticky top-0 z-30 shadow-md">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#00FF41] animate-ping shrink-0" />
+            <h1 className="text-base md:text-xl font-extrabold tracking-tighter text-white uppercase select-none">
+              BAND<span className="text-[#00FF41] drop-shadow-[0_0_10px_rgba(0,255,65,0.35)]">DAN</span>
             </h1>
-            <div className="px-2.5 py-0.5 bg-white/5 border border-white/10 rounded-full text-[9px] font-mono tracking-widest text-[#00FF41]">
-              CONDUCTOR MODE
+            <div className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full text-[8px] font-mono tracking-wider text-[#00FF41] font-bold">
+              CONDUCTOR
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 md:gap-6 font-mono text-[10px]">
-            <div className="flex flex-col">
-              <span className="text-[#8E9299] uppercase text-[9px]">Session Mode</span>
-              <span className="text-white font-bold">GESTURE Broadcaster</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[#8E9299] uppercase text-[9px]">Protocol</span>
-              <span className="text-[#00FF41] font-bold">WebRTC P2P</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[#8E9299] uppercase text-[9px]">Active Listeners</span>
-              <span className="text-[#00FF41] font-bold">
-                {connections.filter((c) => c.status === 'connected').length.toString().padStart(2, '0')}
-              </span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleSound}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200 ${
+                soundEnabled
+                  ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/15 shadow-[0_0_10px_rgba(0,255,65,0.08)]'
+                  : 'border-white/5 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+              }`}
+              title={soundEnabled ? 'Disable Synth' : 'Enable Synth'}
+            >
+              {soundEnabled ? (
+                <>
+                  <Volume2 className="w-3 h-3 text-[#00FF41]" />
+                  <span className="hidden xs:inline">SOUND ON</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3 h-3 text-zinc-500" />
+                  <span className="hidden xs:inline">SOUND OFF</span>
+                </>
+              )}
+            </button>
+
+            <div className="flex font-mono text-[9px]">
+              <div className="flex flex-col text-right">
+                <span className="text-[#8E9299] uppercase text-[8px]">Bandmates</span>
+                <span className="text-[#00FF41] font-bold">
+                  {connections.filter((c) => c.status === 'connected').length.toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6 relative z-10">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 md:gap-6 relative z-10">
         
         {/* Quick control actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-xl">
-          <span className="text-3xs uppercase font-mono font-bold tracking-widest text-[#8E9299] pl-1 select-none">
-            CONDUX CTRL PANEL • v1.1
+        <div className="flex items-center justify-between gap-3 bg-white/[0.02] backdrop-blur-md border border-white/5 p-3 rounded-2xl shadow-xl">
+          <span className="hidden sm:inline text-4xs uppercase font-mono font-bold tracking-widest text-[#8E9299] pl-1 select-none">
+            CONDUX PANEL
           </span>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => startPairingFlow()}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-[0_4px_12px_rgba(0,255,65,0.2)]"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-3xs sm:text-2xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-[0_4px_12px_rgba(0,255,65,0.15)]"
             >
-              <Plus className="w-4 h-4" />
-              <span>ADD LISTENER DEVICE</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>CONNECT</span>
             </button>
             
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs border rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97 ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-3xs sm:text-2xs border rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97 ${
                 showSettings 
                   ? 'bg-[#00FF41]/10 border-[#00FF41] text-[#00FF41]' 
                   : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:border-white/20'
               }`}
             >
-              <Settings className="w-4 h-4" />
-              <span>{showSettings ? 'CLOSE MAPPINGS' : 'EDIT CHORD MAP'}</span>
+              <Settings className="w-3.5 h-3.5" />
+              <span>{showSettings ? 'CLOSE MAP' : 'EDIT MAP'}</span>
             </button>
           </div>
         </div>
@@ -500,37 +531,33 @@ export default function ConductorView() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-6 border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
-                  <Smartphone className="w-7 h-7 text-[#8E9299]/50 mx-auto mb-2" />
-                  <h3 className="font-mono font-bold text-3xs text-[#8E9299] uppercase tracking-wider">No Devices Connected</h3>
-                  <p className="text-4xs text-zinc-500 mt-1.5 max-w-[180px] mx-auto font-sans leading-relaxed uppercase tracking-tight">
-                    No active cell or internet signal is required. Tap Add Listener above.
-                  </p>
+                <div className="text-center py-4 border border-dashed border-white/5 rounded-xl bg-white/[0.01]">
+                  <h3 className="font-mono text-3xs text-[#8E9299] uppercase tracking-wider">No bandmates added</h3>
                 </div>
               )}
             </section>
 
             {/* Manual Keyboard & Chord Board Fallback */}
-            <section id="manual_chord_board" className="bg-white/[0.01] backdrop-blur-lg border border-white/5 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 relative w-full">
+            <section id="manual_chord_board" className="bg-white/[0.01] backdrop-blur-lg border border-white/5 rounded-2xl p-4 shadow-2xl flex flex-col gap-3 relative w-full">
               <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-white/5 pb-3 gap-2">
-                <div className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-[#00FF41]" />
+              <div className="flex items-center justify-between border-b border-white/5 pb-2 gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Volume2 className="w-3.5 h-3.5 text-[#00FF41]" />
                   <div>
-                    <h2 className="font-mono font-bold text-2xs uppercase tracking-wider text-white">MANUAL BOARD</h2>
-                    <p className="text-4xs text-[#8E9299]">Force transmit active chord instantly.</p>
+                    <h2 className="font-mono font-bold text-3xs uppercase tracking-wider text-white">MANUAL BOARD</h2>
+                    <p className="text-[9px] text-[#8E9299]">Tap to transmit chord instantly.</p>
                   </div>
                 </div>
 
                 {lastBroadcastTime > 0 && (
-                  <span className="text-[9px] font-mono text-[#00FF41]/80 uppercase tracking-widest bg-[#00FF41]/10 px-2.5 py-0.5 border border-[#00FF41]/25 rounded-full">
+                  <span className="text-[8px] font-mono text-[#00FF41]/80 uppercase tracking-widest bg-[#00FF41]/10 px-2 py-0.5 border border-[#00FF41]/25 rounded-full">
                     {new Date(lastBroadcastTime).toLocaleTimeString()}
                   </span>
                 )}
               </div>
 
               {/* Quick manual button grid from current mappings */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 {activePreset.mappings.map((mapping) => {
                   const gesture = GESTURES.find((g) => g.id === mapping.gestureId);
                   const isCurrent = activeChord === mapping.chord;
@@ -539,16 +566,16 @@ export default function ConductorView() {
                       key={mapping.gestureId}
                       onClick={() => broadcastChord(mapping.chord)}
                       disabled={!mapping.chord}
-                      className={`group flex flex-col items-center justify-center p-3 border transition-all duration-300 cursor-pointer rounded-xl active:scale-95 ${
+                      className={`group flex flex-col items-center justify-center p-2 border transition-all duration-300 cursor-pointer rounded-xl active:scale-95 ${
                         isCurrent
-                          ? 'border-[#00FF41] bg-[#00FF41]/15 text-white shadow-[0_0_20px_rgba(0,255,65,0.25)] font-extrabold'
+                          ? 'border-[#00FF41] bg-[#00FF41]/15 text-white shadow-[0_0_15px_rgba(0,255,65,0.25)] font-extrabold'
                           : 'border-white/5 bg-black/20 hover:bg-white/5 text-zinc-300 hover:border-white/20'
                       } disabled:opacity-10`}
                     >
-                      <span className={`text-sm font-black font-mono tracking-tight block ${isCurrent ? 'text-[#00FF41] drop-shadow-[0_0_8px_rgba(0,255,65,0.3)]' : ''}`}>
+                      <span className={`text-xs font-black font-mono tracking-tight block ${isCurrent ? 'text-[#00FF41] drop-shadow-[0_0_8px_rgba(0,255,65,0.3)]' : ''}`}>
                         {mapping.chord || '—'}
                       </span>
-                      <span className="text-[9px] font-mono text-[#8E9299] uppercase mt-1 block tracking-wider">
+                      <span className="text-[8px] font-mono text-[#8E9299]/80 uppercase mt-0.5 block tracking-wider truncate max-w-full">
                         {gesture?.name.split(' ')[0] || 'BTN'}
                       </span>
                     </button>
@@ -557,15 +584,15 @@ export default function ConductorView() {
               </div>
 
               {/* Silent custom chord trigger input */}
-              <div className="border-t border-white/5 pt-3.5 flex flex-col gap-2.5">
-                <span className="text-4xs text-[#8E9299] font-mono uppercase tracking-widest">CUSTOM DIRECT CHORD SHIELD BYPASS:</span>
-                <div className="flex gap-2 w-full">
+              <div className="border-t border-white/5 pt-2.5 flex flex-col gap-2">
+                <span className="text-[9px] text-[#8E9299] font-mono uppercase tracking-widest">DIRECT TX CHORD:</span>
+                <div className="flex gap-1.5 w-full">
                   <input
                     type="text"
                     id="custom_chord_tx"
                     placeholder="e.g. F#m7"
                     maxLength={8}
-                    className="flex-1 bg-black/40 border border-white/10 px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold text-[#00FF41] placeholder-zinc-700 focus:outline-hidden focus:border-[#00FF41] uppercase tracking-wide text-center"
+                    className="flex-1 bg-black/40 border border-white/10 px-3 py-2 rounded-xl text-xs font-mono font-bold text-[#00FF41] placeholder-zinc-700 focus:outline-hidden focus:border-[#00FF41] uppercase tracking-wide text-center"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const val = (e.currentTarget as HTMLInputElement).value.trim();
@@ -585,7 +612,7 @@ export default function ConductorView() {
                         el.value = '';
                       }
                     }}
-                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 active:scale-97 text-zinc-200 hover:text-white text-xs font-mono font-bold rounded-xl border border-white/15 hover:border-[#00FF41]/40 transition-all duration-200 cursor-pointer"
+                    className="px-3 py-2 bg-white/5 hover:bg-white/10 active:scale-97 text-zinc-200 hover:text-white text-3xs font-mono font-bold rounded-xl border border-white/15 hover:border-[#00FF41]/40 transition-all duration-200 cursor-pointer"
                   >
                     SEND
                   </button>
@@ -629,15 +656,15 @@ export default function ConductorView() {
               )}
 
               {pairingStep === 'show_offer_qr' && (
-                <div className="flex flex-col items-center gap-4 w-full">
+                <div className="flex flex-col items-center gap-4.5 w-full">
                   <div className="text-zinc-300 text-xs max-w-[280px] font-mono uppercase tracking-tight">
-                    <span className="font-bold text-[#00FF41]">Step 1:</span> Have <span className="font-bold text-white">{currentPairingName}</span> scan the QR code below.
+                    <span className="font-bold text-[#00FF41]">Step 1:</span> Bandmate scans the QR code below
                   </div>
 
-                  <div className="bg-white p-4.5 rounded-2xl shadow-inner border border-white/10">
+                  <div className="bg-white p-3 rounded-xl shadow-inner border border-white/10">
                     <QRCodeSVG
                       value={offerQRValue}
-                      size={240}
+                      size={180}
                       level="L" // L is smaller matrix size, much easier to scan
                       includeMargin={false}
                     />
@@ -645,13 +672,13 @@ export default function ConductorView() {
 
                   <button
                     onClick={copyOfferToClipboard}
-                    className={`w-full py-2.5 border transition-all duration-200 text-3xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
+                    className={`w-full py-2 border transition-all duration-200 text-3xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
                       copiedOffer
                         ? 'border-[#00FF41] bg-[#00FF41]/15 text-[#00FF41]'
                         : 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
                     }`}
                   >
-                    {copiedOffer ? 'OFFER COPIED!' : 'COPY CONNECTION CODE'}
+                    {copiedOffer ? 'OFFER COPIED!' : 'COPY CODE'}
                   </button>
 
                   {pairingError && (
@@ -663,38 +690,46 @@ export default function ConductorView() {
 
                   <button
                     onClick={startAnswerScanner}
-                    className="w-full py-3.5 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-95 text-black text-xs font-mono font-bold rounded-xl shadow-[0_4px_16px_rgba(0,255,65,0.2)] transition-all duration-200 cursor-pointer uppercase tracking-wider"
+                    className="w-full py-3 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-95 text-black text-xs font-mono font-bold rounded-xl shadow-[0_4px_16px_rgba(0,255,65,0.15)] transition-all duration-200 cursor-pointer uppercase tracking-wider"
                   >
-                    Next: Scan Listener&apos;s Answer
+                    Next: Scan Answer QR
                   </button>
                 </div>
               )}
 
               {pairingStep === 'scanning_answer' && (
-                <div className="flex flex-col items-center gap-4 w-full">
+                <div className="flex flex-col items-center gap-4.5 w-full">
                   <div className="text-zinc-300 text-xs max-w-[280px] font-mono uppercase tracking-tight">
-                    <span className="font-bold text-[#00FF41]">Step 2:</span> Scan the answer QR code shown on the listener&apos;s phone.
+                    <span className="font-bold text-[#00FF41]">Step 2:</span> Scan response QR shown on bandmate device
                   </div>
 
                   {/* QR Camera Reader Node */}
-                  <div className="w-full aspect-square max-w-[220px] rounded-2xl overflow-hidden border border-white/10 bg-[#050508]/60 relative flex items-center justify-center">
+                  <div className="w-full aspect-square max-w-[280px] rounded-3xl overflow-hidden border border-white/10 bg-[#050508]/60 relative flex items-center justify-center shadow-[0_0_24px_rgba(0,255,65,0.15)]">
                     {scannerActive ? (
                       <div id="answer-reader" className="w-full h-full" />
                     ) : (
-                      <span className="text-3xs text-[#8E9299] font-mono uppercase">Starting camera scanner...</span>
+                      <span className="text-3xs text-[#8E9299] font-mono uppercase">Starting camera...</span>
                     )}
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-[#00FF41]/60 pointer-events-none animate-pulse" />
+                    {/* Focus Overlay Reticle */}
+                    <div className="absolute inset-5 border border-dashed border-[#00FF41]/40 rounded-2xl pointer-events-none flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-[#00FF41] rounded-full animate-ping" />
+                      {/* Corner Accents */}
+                      <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#00FF41] rounded-tl-lg" />
+                      <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-[#00FF41] rounded-tr-lg" />
+                      <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-[#00FF41] rounded-bl-lg" />
+                      <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#00FF41] rounded-br-lg" />
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 my-1 w-full">
                     <div className="flex-1 h-[1px] bg-white/10" />
-                    <span className="text-[9px] font-mono text-[#8E9299] uppercase tracking-wider">OR PASTE ANSWER</span>
+                    <span className="text-[9px] font-mono text-[#8E9299] uppercase tracking-wider">OR ENTER MANUAL CODE</span>
                     <div className="flex-1 h-[1px] bg-white/10" />
                   </div>
 
                   <div className="flex flex-col gap-2 w-full">
                     <textarea
-                      placeholder="PASTE LISTENER'S ANSWER CODE HERE..."
+                      placeholder="PASTE BANDMATE'S ANSWER CODE HERE..."
                       rows={2}
                       className="w-full bg-black/40 border border-white/10 focus:border-[#00FF41] rounded-xl px-3 py-2 text-[10px] font-mono text-[#00FF41] placeholder-zinc-700 focus:outline-hidden uppercase tracking-wide transition-all resize-none"
                       value={manualAnswerInput}
@@ -703,7 +738,7 @@ export default function ConductorView() {
                     <button
                       onClick={handleManualAnswerSubmit}
                       disabled={!manualAnswerInput.trim()}
-                      className="w-full py-2.5 bg-[#00FF41] hover:bg-[#22ff5a] disabled:bg-white/5 disabled:text-zinc-600 text-black text-3xs font-mono font-bold rounded-xl transition-all duration-200 uppercase tracking-widest cursor-pointer"
+                      className="w-full py-2 bg-[#00FF41] hover:bg-[#22ff5a] disabled:bg-white/5 disabled:text-zinc-650 text-black text-3xs font-mono font-bold rounded-xl transition-all duration-200 uppercase tracking-widest cursor-pointer"
                     >
                       VERIFY & CONNECT
                     </button>
@@ -716,19 +751,19 @@ export default function ConductorView() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-3 w-full">
+                  <div className="grid grid-cols-2 gap-3.5 w-full">
                     <button
                       onClick={() => {
                         stopScanner();
                         setPairingStep('show_offer_qr');
                       }}
-                      className="py-2.5 border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-zinc-300 text-2xs font-mono font-bold rounded-xl transition-all uppercase tracking-wider"
+                      className="py-2.5 border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-zinc-300 text-3xs font-mono font-bold rounded-xl transition-all uppercase tracking-wider cursor-pointer"
                     >
-                      Back to QR
+                      Back
                     </button>
                     <button
                       onClick={cancelPairing}
-                      className="py-2.5 bg-[#FF4444]/15 border border-[#FF4444]/25 hover:bg-[#FF4444]/25 active:scale-95 text-[#FF4444] text-2xs font-mono font-bold rounded-xl transition-all uppercase tracking-wider"
+                      className="py-2.5 bg-[#FF4444]/15 border border-[#FF4444]/25 hover:bg-[#FF4444]/25 active:scale-95 text-[#FF4444] text-3xs font-mono font-bold rounded-xl transition-all uppercase tracking-wider cursor-pointer"
                     >
                       Cancel
                     </button>

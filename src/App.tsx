@@ -32,21 +32,21 @@ export default function App() {
             {/* Top Branding Section */}
             <header className="text-center pt-8 md:pt-16 pb-4">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-[#00FF41] text-3xs font-mono uppercase tracking-widest mb-4 shadow-sm">
-                <Music className="w-3 h-3 text-[#00FF41] animate-pulse" />
-                <span>SYS-P2P • BETA v1.2 • LOCAL SYNC</span>
+                <Music className="w-3 h-3 text-[#00FF41]" />
+                <span>BETA v1.2</span>
               </div>
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-none uppercase select-none">
                 BAND<span className="text-[#00FF41] drop-shadow-[0_0_15px_rgba(0,255,65,0.45)]">DAN</span>
               </h1>
               <p className="text-2xs md:text-xs text-[#8E9299] mt-4 max-w-md mx-auto leading-relaxed font-mono uppercase tracking-wide">
-                Real-time gesture performance & WebRTC Star broadcaster. Works 100% offline with zero latency or cellular signal required.
+                Broadcast visual chord shifts instantly to your bandmates using hand gesture recognition.
               </p>
             </header>
 
             {/* Main Selection Area */}
             <div className="flex-1 flex flex-col justify-center gap-6 py-8 md:py-12 w-full">
               <h2 className="text-4xs uppercase font-mono font-bold tracking-widest text-[#8E9299]/75 mb-1 text-center">
-                [ INITIALIZE P2P MODULE ]
+                [ SELECT YOUR ROLE ]
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
@@ -105,19 +105,6 @@ export default function App() {
                 </button>
               </div>
             </div>
-
-            {/* Bottom help card info */}
-            <footer className="pt-4 pb-6 max-w-4xl mx-auto w-full">
-              <div className="p-4.5 bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl flex items-start gap-4 shadow-md">
-                <HelpCircle className="w-5 h-5 text-[#00FF41] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-4xs font-mono font-bold text-[#8E9299] uppercase tracking-widest">LOCAL PEER-TO-PEER FABRIC</h4>
-                  <p className="text-4xs text-zinc-500 leading-relaxed mt-1 font-mono uppercase tracking-tight">
-                    Each device pairs directly via local Wi-Fi or hotspot QR handshake. Zero internet required. Completely immune to cell signal dropout at underground or concrete venues.
-                  </p>
-                </div>
-              </div>
-            </footer>
           </motion.div>
         )}
 

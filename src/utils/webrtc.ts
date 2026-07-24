@@ -8,28 +8,184 @@ export const RTC_CONFIG: RTCConfiguration = {
 };
 
 /**
- * Compresses an RTCSessionDescriptionInit object into a short alphanumeric string.
+ * Super-minifies a WebRTC SDP for DataChannel by extracting only the absolute essentials.
+ * This filters out all non-essential lines and compresses the fingerprint and candidates.
  */
-export function compressSDP(desc: { type: string; sdp: string }): string {
-  const payload = JSON.stringify({
-    t: desc.type === 'offer' ? 'o' : 'a',
-    s: desc.sdp,
-  });
-  return LZString.compressToEncodedURIComponent(payload);
+function extractSDPParams(sdp: string) {
+  let ufrag = '';
+  let pwd = '';
+  let fingerprint = '';
+  const candidates: Array<[string, number, string]> = []; // [ip, port, type]
+
+  const lines = sdp.split('\n');
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith('a=ice-ufrag:')) {
+      ufrag = line.substring('a=ice-ufrag:'.length);
+    } else if (line.startsWith('a=ice-pwd:')) {
+      pwd = line.substring('a=ice-pwd:'.length);
+    } else if (line.startsWith('a=fingerprint:')) {
+      // Remove 'sha-256 ' and colons to save huge space
+      const fp = line.substring('a=fingerprint:'.length).replace('sha-256 ', '');
+      fingerprint = fp.replace(/:/g, '').toLowerCase();
+    } else if (line.startsWith('a=candidate:')) {
+      const lower = line.toLowerCase();
+      // Skip IPv6 candidates to keep QR code extremely simple
+      if (lower.includes('ip6') || lower.includes(':')) continue;
+
+      const parts = line.split(' ');
+      if (parts.length >= 8) {
+        const ip = parts[4];
+        const port = parseInt(parts[5], 10);
+        const type = parts[7]; // e.g. 'host', 'srflx'
+        
+        // Skip duplicate candidates or non-IPv4 to save space
+        if (ip && port && !candidates.some(c => c[0] === ip && c[1] === port)) {
+          candidates.push([ip, port, type]);
+        }
+      }
+    }
+  }
+
+  // To keep QR code extremely low density, limit to maximum 2 candidates
+  const limitedCandidates = candidates.slice(0, 2);
+
+  return { ufrag, pwd, fingerprint, candidates: limitedCandidates };
 }
 
 /**
- * Decompresses a compressed string back into an RTCSessionDescriptionInit object.
+ * Reconstructs a fully valid WebRTC DataChannel SDP from the super-minified parameters.
+ */
+function reconstructSDP(type: 'offer' | 'answer', params: any): string {
+  const { u, p, f, c } = params;
+  
+  // Restore fingerprint colons: 'aabbcc...' -> 'AA:BB:CC...'
+  let restoredFingerprint = '';
+  if (f) {
+    const upper = f.toUpperCase();
+    const parts = [];
+    for (let i = 0; i < upper.length; i += 2) {
+      parts.push(upper.substring(i, i + 2));
+    }
+    restoredFingerprint = `sha-256 ${parts.join(':')}`;
+  }
+
+  const setupVal = type === 'offer' ? 'actpass' : 'active';
+
+  const sdpLines = [
+    'v=0',
+    `o=- ${Math.floor(Math.random() * 1000000000000000)} 2 IN IP4 127.0.0.1`,
+    's=-',
+    't=0 0',
+    'a=group:BUNDLE 0',
+    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+    'c=IN IP4 0.0.0.0',
+    'a=mid:0',
+    'a=sctp-port:5000',
+    `a=setup:${setupVal}`,
+    `a=ice-ufrag:${u}`,
+    `a=ice-pwd:${p}`,
+    `a=fingerprint:${restoredFingerprint}`,
+  ];
+
+  if (Array.isArray(c)) {
+    c.forEach((cand: [string, number, string], idx) => {
+      const [ip, port, type] = cand;
+      // Rebuild candidate: foundation (idx), component (1), protocol (udp), priority (2130706431), ip, port, typ (type)
+      sdpLines.push(`a=candidate:${idx} 1 udp 2113937151 ${ip} ${port} typ ${type}`);
+    });
+  }
+
+  return sdpLines.join('\r\n') + '\r\n';
+}
+
+/**
+ * Compresses an RTCSessionDescriptionInit object into an ultra-short alphanumeric string.
+ */
+export function compressSDP(desc: { type: string; sdp: string }): string {
+  try {
+    const params = extractSDPParams(desc.sdp);
+    const payload = JSON.stringify({
+      t: desc.type === 'offer' ? 'o' : 'a',
+      u: params.ufrag,
+      p: params.pwd,
+      f: params.fingerprint,
+      c: params.candidates,
+    });
+    // Prefix 'v3_' for the new ultra-minified SDP
+    return 'v3_' + LZString.compressToEncodedURIComponent(payload);
+  } catch (err) {
+    console.warn('Failed to compress minified SDP, falling back to full SDP compression:', err);
+    const payload = JSON.stringify({
+      t: desc.type === 'offer' ? 'o' : 'a',
+      s: desc.sdp,
+    });
+    return 'v1_' + LZString.compressToEncodedURIComponent(payload);
+  }
+}
+
+/**
+ * Decompresses an ultra-short compressed string back into an RTCSessionDescriptionInit object.
  */
 export function decompressSDP(compressed: string): RTCSessionDescriptionInit | null {
   try {
-    const raw = LZString.decompressFromEncodedURIComponent(compressed);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return {
-      type: parsed.t === 'o' ? 'offer' : 'answer',
-      sdp: parsed.s,
-    };
+    if (compressed.startsWith('v3_')) {
+      const raw = LZString.decompressFromEncodedURIComponent(compressed.substring(3));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      
+      const reconstructedSdp = reconstructSDP(
+        parsed.t === 'o' ? 'offer' : 'answer',
+        parsed
+      );
+      
+      return {
+        type: parsed.t === 'o' ? 'offer' : 'answer',
+        sdp: reconstructedSdp,
+      };
+    } else if (compressed.startsWith('v2_')) {
+      const raw = LZString.decompressFromEncodedURIComponent(compressed.substring(3));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      
+      // V2 support
+      const sdpLines = [
+        'v=0',
+        `o=- ${Math.floor(Math.random() * 1000000000000000)} 2 IN IP4 127.0.0.1`,
+        's=-',
+        't=0 0',
+        'a=group:BUNDLE 0',
+        'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+        'c=IN IP4 0.0.0.0',
+        'a=mid:0',
+        'a=sctp-port:5000',
+        `a=setup:${parsed.s || (parsed.t === 'o' ? 'actpass' : 'active')}`,
+        `a=ice-ufrag:${parsed.u}`,
+        `a=ice-pwd:${parsed.p}`,
+        `a=fingerprint:sha-256 ${parsed.f}`,
+      ];
+
+      if (Array.isArray(parsed.c)) {
+        parsed.c.forEach((cand: string) => {
+          const fullCand = cand.startsWith('a=') ? cand : `a=${cand}`;
+          sdpLines.push(fullCand);
+        });
+      }
+
+      return {
+        type: parsed.t === 'o' ? 'offer' : 'answer',
+        sdp: sdpLines.join('\r\n') + '\r\n',
+      };
+    } else {
+      const targetStr = compressed.startsWith('v1_') ? compressed.substring(3) : compressed;
+      const raw = LZString.decompressFromEncodedURIComponent(targetStr);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return {
+        type: parsed.t === 'o' ? 'offer' : 'answer',
+        sdp: parsed.s,
+      };
+    }
   } catch (error) {
     console.error('Failed to decompress SDP string:', error);
     return null;
