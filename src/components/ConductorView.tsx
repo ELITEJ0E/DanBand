@@ -50,6 +50,26 @@ export default function ConductorView() {
   const [offerQRValue, setOfferQRValue] = useState<string>('');
   const [pairingError, setPairingError] = useState<string | null>(null);
 
+  // Manual text-pairing fallback states
+  const [copiedOffer, setCopiedOffer] = useState<boolean>(false);
+  const [manualAnswerInput, setManualAnswerInput] = useState<string>('');
+
+  const copyOfferToClipboard = () => {
+    if (!offerQRValue) return;
+    navigator.clipboard.writeText(offerQRValue)
+      .then(() => {
+        setCopiedOffer(true);
+        setTimeout(() => setCopiedOffer(false), 2000);
+      })
+      .catch((err) => console.error('Failed to copy connection code:', err));
+  };
+
+  const handleManualAnswerSubmit = async () => {
+    const sdpText = manualAnswerInput.trim();
+    if (!sdpText) return;
+    await handleScannedAnswer(sdpText);
+  };
+
   // Scanner state
   const [scannerActive, setScannerActive] = useState<boolean>(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -216,6 +236,7 @@ export default function ConductorView() {
     stopScanner();
     setPairingStep('idle');
     setPairingError(null);
+    setManualAnswerInput('');
   };
 
   // Start camera scanner to read Listener's Answer QR
@@ -235,7 +256,7 @@ export default function ConductorView() {
           {
             fps: 15,
             qrbox: (width, height) => {
-              const size = Math.min(width, height) * 0.7;
+              const size = Math.min(width, height) * 0.85;
               return { width: size, height: size };
             },
           },
@@ -284,6 +305,7 @@ export default function ConductorView() {
 
       await activeConn.peerConnection.setRemoteDescription(decompressed);
       setPairingStep('idle');
+      setManualAnswerInput('');
       
       // Send active chord over to the newly connected listener immediately
       if (activeChord !== '—') {
@@ -615,11 +637,22 @@ export default function ConductorView() {
                   <div className="bg-white p-4.5 rounded-2xl shadow-inner border border-white/10">
                     <QRCodeSVG
                       value={offerQRValue}
-                      size={210}
+                      size={240}
                       level="L" // L is smaller matrix size, much easier to scan
                       includeMargin={false}
                     />
                   </div>
+
+                  <button
+                    onClick={copyOfferToClipboard}
+                    className={`w-full py-2.5 border transition-all duration-200 text-3xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
+                      copiedOffer
+                        ? 'border-[#00FF41] bg-[#00FF41]/15 text-[#00FF41]'
+                        : 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+                    }`}
+                  >
+                    {copiedOffer ? 'OFFER COPIED!' : 'COPY CONNECTION CODE'}
+                  </button>
 
                   {pairingError && (
                     <div className="flex items-center gap-1.5 text-[#FF4444] text-3xs bg-[#FF4444]/10 border border-[#FF4444]/20 px-3 py-1.5 rounded-xl max-w-[260px]">
@@ -651,6 +684,29 @@ export default function ConductorView() {
                       <span className="text-3xs text-[#8E9299] font-mono uppercase">Starting camera scanner...</span>
                     )}
                     <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-[#00FF41]/60 pointer-events-none animate-pulse" />
+                  </div>
+
+                  <div className="flex items-center gap-2 my-1 w-full">
+                    <div className="flex-1 h-[1px] bg-white/10" />
+                    <span className="text-[9px] font-mono text-[#8E9299] uppercase tracking-wider">OR PASTE ANSWER</span>
+                    <div className="flex-1 h-[1px] bg-white/10" />
+                  </div>
+
+                  <div className="flex flex-col gap-2 w-full">
+                    <textarea
+                      placeholder="PASTE LISTENER'S ANSWER CODE HERE..."
+                      rows={2}
+                      className="w-full bg-black/40 border border-white/10 focus:border-[#00FF41] rounded-xl px-3 py-2 text-[10px] font-mono text-[#00FF41] placeholder-zinc-700 focus:outline-hidden uppercase tracking-wide transition-all resize-none"
+                      value={manualAnswerInput}
+                      onChange={(e) => setManualAnswerInput(e.target.value)}
+                    />
+                    <button
+                      onClick={handleManualAnswerSubmit}
+                      disabled={!manualAnswerInput.trim()}
+                      className="w-full py-2.5 bg-[#00FF41] hover:bg-[#22ff5a] disabled:bg-white/5 disabled:text-zinc-600 text-black text-3xs font-mono font-bold rounded-xl transition-all duration-200 uppercase tracking-widest cursor-pointer"
+                    >
+                      VERIFY & CONNECT
+                    </button>
                   </div>
 
                   {pairingError && (

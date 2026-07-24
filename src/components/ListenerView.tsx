@@ -28,6 +28,26 @@ export default function ListenerView() {
   const [answerQRValue, setAnswerQRValue] = useState<string>('');
   const [pairingError, setPairingError] = useState<string | null>(null);
 
+  // Manual fallback states
+  const [manualOfferInput, setManualOfferInput] = useState<string>('');
+  const [copiedAnswer, setCopiedAnswer] = useState<boolean>(false);
+
+  const copyAnswerToClipboard = () => {
+    if (!answerQRValue) return;
+    navigator.clipboard.writeText(answerQRValue)
+      .then(() => {
+        setCopiedAnswer(true);
+        setTimeout(() => setCopiedAnswer(false), 2000);
+      })
+      .catch((err) => console.error('Failed to copy answer code:', err));
+  };
+
+  const handleManualOfferSubmit = async () => {
+    const sdpText = manualOfferInput.trim();
+    if (!sdpText) return;
+    await handleScannedOffer(sdpText);
+  };
+
   // Connection State
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -65,7 +85,7 @@ export default function ListenerView() {
           {
             fps: 15,
             qrbox: (width, height) => {
-              const size = Math.min(width, height) * 0.7;
+              const size = Math.min(width, height) * 0.85;
               return { width: size, height: size };
             },
           },
@@ -107,6 +127,7 @@ export default function ListenerView() {
     await stopScanner();
     setPairingStep('generating_answer');
     setPairingError(null);
+    setManualOfferInput('');
 
     try {
       const offerDesc = decompressSDP(compressedOffer);
@@ -219,6 +240,8 @@ export default function ListenerView() {
     setConnectionStatus('disconnected');
     setPairingStep('name_entry');
     setActiveChord('WAIT');
+    setManualOfferInput('');
+    setCopiedAnswer(false);
   };
 
   // Clean up on unmount
@@ -284,6 +307,30 @@ export default function ListenerView() {
               <Camera className="w-4 h-4" />
               <span>SCAN CONDUCTOR QR</span>
             </button>
+
+            <div className="flex items-center gap-2 my-1">
+              <div className="flex-1 h-[1px] bg-white/10" />
+              <span className="text-[9px] font-mono text-[#8E9299] uppercase tracking-wider">OR ENTER MANUALLY</span>
+              <div className="flex-1 h-[1px] bg-white/10" />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <textarea
+                placeholder="PASTE CONDUCTOR'S CONNECTION CODE HERE..."
+                rows={3}
+                disabled={!displayName.trim()}
+                className="w-full bg-[#050508]/60 border border-white/10 focus:border-[#00FF41] rounded-xl px-3.5 py-2.5 text-[10px] font-mono text-[#00FF41] placeholder-zinc-700 focus:outline-hidden uppercase tracking-wide transition-all resize-none"
+                value={manualOfferInput}
+                onChange={(e) => setManualOfferInput(e.target.value)}
+              />
+              <button
+                onClick={handleManualOfferSubmit}
+                disabled={!displayName.trim() || !manualOfferInput.trim()}
+                className="w-full py-2.5 bg-white/5 hover:bg-white/10 disabled:bg-transparent disabled:text-zinc-750 active:scale-97 text-zinc-300 hover:text-white text-3xs font-mono font-bold rounded-xl border border-white/10 hover:border-[#00FF41]/40 transition-all duration-200 uppercase tracking-widest cursor-pointer"
+              >
+                CONNECT WITH CODE
+              </button>
+            </div>
           </div>
 
           <div className="text-4xs text-zinc-650 font-mono text-center max-w-xs uppercase tracking-wider leading-relaxed">
@@ -346,23 +393,34 @@ export default function ListenerView() {
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow-2xl border-2 border-[#2D2D3F]">
+          <div className="bg-white p-4.5 rounded-2xl shadow-2xl border border-white/10">
             <QRCodeSVG
               value={answerQRValue}
-              size={230}
+              size={240}
               level="L"
               includeMargin={false}
             />
           </div>
 
-          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-[#12121A] border border-[#2D2D3F] rounded-lg text-4xs uppercase tracking-widest font-mono font-bold text-zinc-400">
+          <button
+            onClick={copyAnswerToClipboard}
+            className={`w-full py-2.5 border transition-all duration-200 text-3xs font-mono font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
+              copiedAnswer
+                ? 'border-[#00FF41] bg-[#00FF41]/15 text-[#00FF41]'
+                : 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+            }`}
+          >
+            {copiedAnswer ? 'ANSWER COPIED!' : 'COPY ANSWER CODE'}
+          </button>
+
+          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-[#12121A] border border-white/5 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold text-zinc-400">
             <RefreshCw className="w-3 h-3 animate-spin text-[#00FF41]" />
             <span>Awaiting peer verification...</span>
           </div>
 
           <button
             onClick={disconnectAndReset}
-            className="px-4 py-2 bg-[#FF4444]/15 border-2 border-[#FF4444]/30 text-[#FF4444] hover:bg-[#FF4444]/25 text-xs font-mono font-bold rounded-lg transition cursor-pointer uppercase tracking-wider"
+            className="px-4 py-2.5 bg-[#FF4444]/15 border border-[#FF4444]/25 hover:bg-[#FF4444]/25 text-xs font-mono font-bold rounded-xl transition cursor-pointer uppercase tracking-wider"
           >
             Cancel & Disconnect
           </button>
