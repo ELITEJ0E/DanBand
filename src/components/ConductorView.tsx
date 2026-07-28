@@ -29,10 +29,15 @@ import {
   Camera, 
   RotateCcw,
   Volume2,
-  VolumeX
+  VolumeX,
+  ArrowLeft
 } from 'lucide-react';
 
-export default function ConductorView() {
+interface ConductorViewProps {
+  onExit?: () => void;
+}
+
+export default function ConductorView({ onExit }: ConductorViewProps) {
   // Preset state
   const [presets, setPresets] = useState<Preset[]>(loadPresets);
   const [activePreset, setActivePreset] = useState<Preset>(() => {
@@ -87,6 +92,45 @@ export default function ConductorView() {
 
   // Expandable Settings panel
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showCheatSheet, setShowCheatSheet] = useState<boolean>(false);
+
+  // Sync state with browser history for back-button support on mobile
+  useEffect(() => {
+    const isAnyOverlayActive = showCheatSheet || pairingStep !== 'idle' || showSettings;
+
+    const handlePopState = () => {
+      if (showCheatSheet) {
+        setShowCheatSheet(false);
+      }
+      if (pairingStep !== 'idle') {
+        // Stop scanner if active
+        if (scannerRef.current) {
+          try {
+            if (scannerRef.current.isScanning) {
+              scannerRef.current.stop();
+            }
+          } catch (e) {
+            console.error('Error stopping scanner from popstate:', e);
+          }
+          scannerRef.current = null;
+        }
+        setScannerActive(false);
+        setPairingStep('idle');
+      }
+      if (showSettings) {
+        setShowSettings(false);
+      }
+    };
+
+    if (isAnyOverlayActive) {
+      window.history.pushState({ isOverlayActive: true }, '');
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [showCheatSheet, pairingStep, showSettings]);
 
   // Clean up all connections on unmount
   useEffect(() => {
@@ -359,13 +403,25 @@ export default function ConductorView() {
       {/* Specialist Hardware Telemetry Header */}
       <div className="w-full border-b border-white/5 bg-black/40 backdrop-blur-md px-4 py-3 sticky top-0 z-30 shadow-md">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-[#00FF41] animate-ping shrink-0" />
-            <h1 className="text-base md:text-xl font-extrabold tracking-tighter text-white uppercase select-none">
-              BAND<span className="text-[#00FF41] drop-shadow-[0_0_10px_rgba(0,255,65,0.35)]">DAN</span>
-            </h1>
-            <div className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full text-[8px] font-mono tracking-wider text-[#00FF41] font-bold">
-              CONDUCTOR
+          <div className="flex items-center gap-3">
+            {onExit && (
+              <button
+                onClick={onExit}
+                className="flex items-center gap-1 px-2 py-1 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 text-4xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 uppercase tracking-wider"
+                title="Exit Session"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                <span>EXIT</span>
+              </button>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#00FF41] animate-ping shrink-0" />
+              <h1 className="text-base md:text-xl font-extrabold tracking-tighter text-white uppercase select-none">
+                BAND<span className="text-[#00FF41] drop-shadow-[0_0_10px_rgba(0,255,65,0.35)]">DAN</span>
+              </h1>
+              <div className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full text-[8px] font-mono tracking-wider text-[#00FF41] font-bold">
+                CONDUCTOR
+              </div>
             </div>
           </div>
 
@@ -411,7 +467,15 @@ export default function ConductorView() {
           <span className="hidden sm:inline text-4xs uppercase font-mono font-bold tracking-widest text-[#8E9299] pl-1 select-none">
             CONDUX PANEL
           </span>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setShowCheatSheet(true)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-3xs sm:text-2xs border border-[#00FF41]/25 bg-[#00FF41]/5 text-[#00FF41] hover:bg-[#00FF41]/10 rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-[#00FF41]" />
+              <span>GUIDE</span>
+            </button>
+
             <button
               onClick={() => startPairingFlow()}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-3xs sm:text-2xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-[0_4px_12px_rgba(0,255,65,0.15)]"
@@ -664,9 +728,9 @@ export default function ConductorView() {
                   <div className="bg-white p-3 rounded-xl shadow-inner border border-white/10">
                     <QRCodeSVG
                       value={offerQRValue}
-                      size={180}
+                      size={220}
                       level="L" // L is smaller matrix size, much easier to scan
-                      includeMargin={false}
+                      includeMargin={true}
                     />
                   </div>
 
@@ -771,6 +835,128 @@ export default function ConductorView() {
                 </div>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Modal / Dialog Component Guide for Conductors */}
+      {showCheatSheet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in" role="dialog" aria-modal="true">
+          <div className="bg-[#0b0b12] border-2 border-[#00FF41]/20 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,255,65,0.12)]">
+            {/* Header */}
+            <div className="p-5 border-b border-white/5 bg-black/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-lg">
+                  <HelpCircle className="w-5 h-5 text-[#00FF41]" />
+                </div>
+                <div>
+                  <h2 className="text-sm md:text-base font-extrabold tracking-tight text-white uppercase font-mono">
+                    [ CONDUCTOR GUIDE & REFERENCE ]
+                  </h2>
+                  <p className="text-4xs text-[#8E9299] font-mono uppercase tracking-widest mt-0.5">
+                    Interactive handbook for gesture detection and band connection
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCheatSheet(false)}
+                className="p-1.5 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition duration-200 cursor-pointer"
+                title="Close guide"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6">
+              
+              {/* Tutorial Overview banner */}
+              <div className="p-4.5 bg-[#00FF41]/5 border border-[#00FF41]/15 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div className="p-2.5 bg-[#00FF41]/10 rounded-xl border border-[#00FF41]/20 shrink-0">
+                  <Video className="w-6 h-6 text-[#00FF41]" />
+                </div>
+                <div>
+                  <h3 className="text-3xs font-mono font-bold text-[#00FF41] uppercase tracking-wider">How Conductor Mode Works</h3>
+                  <p className="text-4xs md:text-3xs text-zinc-300 leading-relaxed mt-1 font-mono uppercase tracking-wide">
+                    Position your hand clearly within the camera feed. Keep your fingers visible, flat, and pointing upward.
+                    Hold any gesture steady for <span className="text-[#00FF41] font-bold">150ms</span> to instantly broadcast the corresponding chord
+                    to all synchronized bandmates.
+                  </p>
+                </div>
+              </div>
+
+              {/* Grid of Gestures */}
+              <div>
+                <h3 className="text-4xs font-mono font-bold text-[#8E9299] uppercase tracking-widest mb-3.5">
+                  AVAILABLE GESTURES ({GESTURES.length}) & LIVE ASSIGNMENTS:
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {GESTURES.map((gesture) => {
+                    const mappedChord = activePreset.mappings.find((m) => m.gestureId === gesture.id)?.chord || '—';
+                    return (
+                      <div 
+                        key={gesture.id}
+                        className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-between gap-3 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl bg-black/40 p-2.5 rounded-xl border border-white/5 min-w-[3.2rem] text-center shadow-inner">
+                            {gesture.emoji}
+                          </div>
+                          <div>
+                            <div className="font-mono font-bold text-3xs text-white uppercase tracking-wider">
+                              {gesture.name}
+                            </div>
+                            <div className="text-[9px] font-mono text-zinc-500 uppercase leading-tight mt-0.5">
+                              {gesture.description}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="text-[8px] font-mono text-[#8E9299] uppercase tracking-widest">Triggers</span>
+                          <span className="px-2.5 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/35 rounded-lg font-mono text-[#00FF41] font-bold text-xs shadow-[0_0_12px_rgba(0,255,65,0.1)]">
+                            {mappedChord}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tips Section */}
+              <div className="pt-2 border-t border-white/5">
+                <h4 className="text-4xs font-mono font-bold text-[#8E9299] uppercase tracking-widest mb-3">
+                  💡 Tips for Perfect Recognition:
+                </h4>
+                <ul className="space-y-2 text-[10px] font-mono text-zinc-400 uppercase tracking-wide leading-relaxed">
+                  <li className="flex gap-2">
+                    <span className="text-[#00FF41]">•</span>
+                    <span><strong>Good Lighting:</strong> Make sure your hand is well-lit so joint locations are recognized instantly.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#00FF41]">•</span>
+                    <span><strong>Keep Hand Flat:</strong> Present your palm face-on to the camera to optimize skeleton tracking.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#00FF41]">•</span>
+                    <span><strong>Separate Your Fingers:</strong> Spread your fingers clearly when presenting 1 to 5 to avoid overlap detection.</span>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-black/40 border-t border-white/5 flex justify-end">
+              <button
+                onClick={() => setShowCheatSheet(false)}
+                className="px-6 py-2 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-3xs font-mono font-bold rounded-xl transition-all duration-200 uppercase tracking-widest cursor-pointer"
+              >
+                GOT IT
+              </button>
             </div>
           </div>
         </div>

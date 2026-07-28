@@ -224,13 +224,13 @@ export default function GestureDetector({ onGestureTriggered, activeChord }: Ges
             setRawGesture(currentGesture);
 
             // Debounce processing:
-            // Must be held steady for 300ms
+            // Must be held steady for 150ms for lightning-fast, snappy updates
             if (currentGesture !== rawGestureRef.current) {
               rawGestureRef.current = currentGesture;
               lastChangeTimeRef.current = performance.now();
             } else {
               const duration = performance.now() - lastChangeTimeRef.current;
-              if (duration >= 300) {
+              if (duration >= 150) {
                 if (currentGesture !== triggeredGestureRef.current) {
                   triggeredGestureRef.current = currentGesture;
                   setDebouncedGesture(currentGesture);

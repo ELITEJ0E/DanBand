@@ -47,8 +47,19 @@ function extractSDPParams(sdp: string) {
     }
   }
 
-  // To keep QR code extremely low density, limit to maximum 2 candidates
-  const limitedCandidates = candidates.slice(0, 2);
+  // Prioritize typical local IPv4 addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+  candidates.sort((a, b) => {
+    const ipA = a[0];
+    const ipB = b[0];
+    const isLocalA = ipA.startsWith('192.168.') || ipA.startsWith('10.') || ipA.startsWith('172.');
+    const isLocalB = ipB.startsWith('192.168.') || ipB.startsWith('10.') || ipB.startsWith('172.');
+    if (isLocalA && !isLocalB) return -1;
+    if (!isLocalA && isLocalB) return 1;
+    return 0;
+  });
+
+  // Limit to exactly 1 high-priority candidate for ultra-simplified QR matrix density
+  const limitedCandidates = candidates.slice(0, 1);
 
   return { ufrag, pwd, fingerprint, candidates: limitedCandidates };
 }
@@ -89,8 +100,15 @@ function reconstructSDP(type: 'offer' | 'answer', params: any): string {
   ];
 
   if (Array.isArray(c)) {
-    c.forEach((cand: [string, number, string], idx) => {
-      const [ip, port, type] = cand;
+    c.forEach((cand: any, idx) => {
+      let ip, port, type;
+      if (Array.isArray(cand)) {
+        ip = cand[0];
+        port = cand[1];
+        type = cand[2] || 'host'; // Default to host if omitted
+      } else {
+        return;
+      }
       // Rebuild candidate: foundation (idx), component (1), protocol (udp), priority (2130706431), ip, port, typ (type)
       sdpLines.push(`a=candidate:${idx} 1 udp 2113937151 ${ip} ${port} typ ${type}`);
     });
@@ -110,7 +128,7 @@ export function compressSDP(desc: { type: string; sdp: string }): string {
       u: params.ufrag,
       p: params.pwd,
       f: params.fingerprint,
-      c: params.candidates,
+      c: params.candidates.map(cand => [cand[0], cand[1]]), // Omit the 'host' type string to save bytes
     });
     // Prefix 'v3_' for the new ultra-minified SDP
     return 'v3_' + LZString.compressToEncodedURIComponent(payload);

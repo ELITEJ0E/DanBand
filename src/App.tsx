@@ -1,13 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import ConductorView from './components/ConductorView';
 import ListenerView from './components/ListenerView';
-import { Radio, Smartphone, Music, ChevronRight, HelpCircle, ArrowLeft } from 'lucide-react';
+import { Radio, Smartphone, Music, ChevronRight } from 'lucide-react';
 
 type AppRole = 'select' | 'conductor' | 'listener';
 
 export default function App() {
   const [role, setRole] = useState<AppRole>('select');
+
+  // Push historical state so mobile browser back button works properly
+  useEffect(() => {
+    // Initial state setup to handle backward navigation to select screen
+    if (!window.history.state || window.history.state.role !== 'select') {
+      window.history.replaceState({ role: 'select' }, '');
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && typeof e.state.role === 'string') {
+        setRole(e.state.role as AppRole);
+      } else {
+        setRole('select');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  const changeRole = (newRole: AppRole) => {
+    if (newRole === role) return;
+    setRole(newRole);
+    window.history.pushState({ role: newRole }, '');
+  };
+
+  const handleExitConductor = () => {
+    if (confirm('Leave Conductor mode? This will disconnect all paired listeners.')) {
+      changeRole('select');
+    }
+  };
+
+  const handleExitListener = () => {
+    changeRole('select');
+  };
 
   return (
     <div className="min-h-screen bg-[#07070B] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#121225] via-[#07070B] to-[#030305] text-[#E0E0E0] flex flex-col font-sans selection:bg-[#00FF41] selection:text-zinc-950 relative overflow-x-hidden">
@@ -52,7 +89,7 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
                 {/* Conductor Role Card */}
                 <button
-                  onClick={() => setRole('conductor')}
+                  onClick={() => changeRole('conductor')}
                   className="group relative flex flex-col justify-between text-left p-6 md:p-8 bg-[#12121A]/40 backdrop-blur-xl border border-white/10 hover:border-[#00FF41]/60 rounded-3xl cursor-pointer transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,255,65,0.08)] active:scale-97 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
                 >
                   {/* Highlight line top edge */}
@@ -79,7 +116,7 @@ export default function App() {
 
                 {/* Listener Role Card */}
                 <button
-                  onClick={() => setRole('listener')}
+                  onClick={() => changeRole('listener')}
                   className="group relative flex flex-col justify-between text-left p-6 md:p-8 bg-[#12121A]/40 backdrop-blur-xl border border-white/10 hover:border-[#00FF41]/60 rounded-3xl cursor-pointer transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,255,65,0.08)] active:scale-97 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
                 >
                   {/* Highlight line top edge */}
@@ -116,22 +153,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col relative"
           >
-            {/* Quick return back to selection */}
-            <div className="absolute top-4 left-4 z-40 hidden md:block">
-              <button
-                onClick={() => {
-                  if (confirm('Leave Conductor mode? This will disconnect all paired listeners.')) {
-                    setRole('select');
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 bg-[#12121A] hover:bg-[#1A1A24] text-zinc-300 hover:text-white border border-[#2D2D3F] hover:border-[#00FF41] text-xs font-mono font-bold rounded-lg transition"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-[#00FF41]" />
-                <span>EXIT SESSION</span>
-              </button>
-            </div>
-
-            <ConductorView />
+            <ConductorView onExit={handleExitConductor} />
           </motion.div>
         )}
 
@@ -143,42 +165,10 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col relative"
           >
-            {/* Quick exit option for listeners on setup stage */}
-            <div className="absolute top-4 left-4 z-40 hidden md:block">
-              <button
-                onClick={() => setRole('select')}
-                className="flex items-center gap-1 px-3 py-1.5 bg-[#12121A] hover:bg-[#1A1A24] text-zinc-300 hover:text-white border border-[#2D2D3F] hover:border-[#00FF41] text-xs font-mono font-bold rounded-lg transition"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-[#00FF41]" />
-                <span>BACK</span>
-              </button>
-            </div>
-
-            <ListenerView />
+            <ListenerView onExit={handleExitListener} />
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Small subtle global footer to help select back on mobile */}
-      {role !== 'select' && (
-        <div className="fixed bottom-4 left-4 z-40 md:hidden">
-          <button
-            onClick={() => {
-              if (role === 'conductor') {
-                if (confirm('Leave Conductor mode? This will disconnect all paired listeners.')) {
-                  setRole('select');
-                }
-              } else {
-                setRole('select');
-              }
-            }}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-[#12121A] border border-[#2D2D3F] shadow-xl text-zinc-400 active:text-[#00FF41]"
-            title="Return to selection"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#00FF41]" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

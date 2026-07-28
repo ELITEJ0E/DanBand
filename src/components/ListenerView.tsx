@@ -16,10 +16,15 @@ import {
   LogOut,
   Sparkles,
   Volume2,
-  VolumeX
+  VolumeX,
+  ArrowLeft
 } from 'lucide-react';
 
-export default function ListenerView() {
+interface ListenerViewProps {
+  onExit?: () => void;
+}
+
+export default function ListenerView({ onExit }: ListenerViewProps) {
   // Local Settings
   const [displayName, setDisplayName] = useState<string>(() => {
     return localStorage.getItem('banddan_display_name') || 'Keys';
@@ -265,6 +270,42 @@ export default function ListenerView() {
     setCopiedAnswer(false);
   };
 
+  // Sync state with browser history for back-button support on mobile
+  useEffect(() => {
+    const isSubActive = pairingStep !== 'name_entry';
+
+    const handlePopState = () => {
+      if (pairingStep !== 'name_entry') {
+        if (pairingStep === 'listening') {
+          disconnectAndReset();
+        } else {
+          // If scanning, stop camera
+          if (scannerRef.current) {
+            try {
+              if (scannerRef.current.isScanning) {
+                scannerRef.current.stop();
+              }
+            } catch (e) {
+              console.error('Error stopping scanner from popstate:', e);
+            }
+            scannerRef.current = null;
+          }
+          setScannerActive(false);
+          setPairingStep('name_entry');
+        }
+      }
+    };
+
+    if (isSubActive) {
+      window.history.pushState({ isListenerSubActive: true }, '');
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [pairingStep]);
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -285,6 +326,56 @@ export default function ListenerView() {
       {/* iOS-Style ambient background glows */}
       <div className="absolute top-0 left-[20%] w-[50%] aspect-square rounded-full bg-[#00FF41]/3 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[-10%] w-[40%] aspect-square rounded-full bg-[#3B82F6]/3 blur-[120px] pointer-events-none" />
+
+      {/* Sleek Navigation Bar (hidden during active performance) */}
+      {pairingStep !== 'listening' && (
+        <div className="w-full max-w-sm mx-auto flex items-center justify-between gap-2 pb-4 relative z-10 border-b border-white/5 mb-6">
+          <div className="flex items-center gap-3">
+            {onExit && (
+              <button
+                onClick={onExit}
+                className="flex items-center gap-1 px-2 py-1 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 text-4xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 uppercase tracking-wider"
+                title="Exit Session"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                <span>EXIT</span>
+              </button>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#00FF41] animate-ping shrink-0" />
+              <span className="text-xs font-mono font-extrabold tracking-tight text-white uppercase select-none">
+                BAND<span className="text-[#00FF41]">DAN</span>
+              </span>
+              <div className="px-1.5 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full text-[7px] font-mono tracking-wider text-[#00FF41] font-bold">
+                BANDMATE
+              </div>
+            </div>
+          </div>
+
+          {/* Local sound controls for bandmate */}
+          <button
+            onClick={toggleSound}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200 ${
+              soundEnabled
+                ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/15 shadow-[0_0_10px_rgba(0,255,65,0.08)]'
+                : 'border-white/5 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+            }`}
+            title={soundEnabled ? 'Disable Sound' : 'Enable Sound'}
+          >
+            {soundEnabled ? (
+              <>
+                <Volume2 className="w-3 h-3 text-[#00FF41]" />
+                <span className="hidden xs:inline">ON</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-3 h-3 text-zinc-500" />
+                <span className="hidden xs:inline">OFF</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* 1. Name Entry & Setup */}
       {pairingStep === 'name_entry' && (
@@ -307,7 +398,7 @@ export default function ListenerView() {
                 maxLength={16}
                 value={displayName}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full bg-black/40 border border-white/5 focus:border-[#00FF41] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF41] placeholder-zinc-800 focus:outline-hidden uppercase tracking-wide transition-all"
+                className="w-full bg-black/80 border border-zinc-700/85 focus:border-[#00FF41] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#00FF41] placeholder-zinc-500 focus:outline-hidden uppercase tracking-wide transition-all shadow-inner"
               />
             </div>
 
@@ -320,24 +411,24 @@ export default function ListenerView() {
             </button>
 
             <div className="flex items-center gap-1.5 my-0.5">
-              <div className="flex-1 h-[1px] bg-white/5" />
-              <span className="text-4xs font-mono text-zinc-650 uppercase tracking-wider">OR PASTE</span>
-              <div className="flex-1 h-[1px] bg-white/5" />
+              <div className="flex-1 h-[1px] bg-white/10" />
+              <span className="text-4xs font-mono text-zinc-400 uppercase tracking-wider">OR PASTE</span>
+              <div className="flex-1 h-[1px] bg-white/10" />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <textarea
-                placeholder="PASTE CODE HERE..."
-                rows={1}
+                placeholder="PASTE CONNECTION CODE HERE..."
+                rows={2}
                 disabled={!displayName.trim()}
-                className="w-full bg-black/40 border border-white/5 focus:border-[#00FF41] rounded-lg px-2.5 py-1.5 text-[9px] font-mono text-[#00FF41] placeholder-zinc-800 focus:outline-hidden uppercase tracking-wide transition-all resize-none"
+                className="w-full bg-black/80 border border-zinc-700/85 focus:border-[#00FF41] rounded-lg px-3 py-2 text-[10px] font-mono text-[#00FF41] placeholder-zinc-500 focus:outline-hidden uppercase tracking-wide transition-all resize-none shadow-inner"
                 value={manualOfferInput}
                 onChange={(e) => setManualOfferInput(e.target.value)}
               />
               <button
                 onClick={handleManualOfferSubmit}
                 disabled={!displayName.trim() || !manualOfferInput.trim()}
-                className="w-full py-1.5 bg-white/5 hover:bg-white/10 disabled:bg-transparent disabled:text-zinc-800 active:scale-97 text-zinc-400 hover:text-white text-4xs font-mono font-bold rounded-lg border border-white/5 hover:border-[#00FF41]/40 transition-all duration-200 uppercase tracking-widest cursor-pointer"
+                className="w-full py-2 bg-[#00FF41]/10 hover:bg-[#00FF41]/20 disabled:bg-white/5 disabled:text-zinc-600 disabled:border-transparent active:scale-97 text-[#00FF41] text-3xs font-mono font-bold rounded-lg border border-[#00FF41]/30 hover:border-[#00FF41]/60 transition-all duration-200 uppercase tracking-widest cursor-pointer shadow-[0_2px_8px_rgba(0,255,65,0.05)]"
               >
                 CONNECT WITH CODE
               </button>
@@ -408,9 +499,9 @@ export default function ListenerView() {
           <div className="bg-white p-3 rounded-xl shadow-2xl border border-white/10">
             <QRCodeSVG
               value={answerQRValue}
-              size={180}
+              size={220}
               level="L"
-              includeMargin={false}
+              includeMargin={true}
             />
           </div>
 
