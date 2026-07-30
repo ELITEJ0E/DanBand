@@ -58,8 +58,8 @@ function extractSDPParams(sdp: string) {
     return 0;
   });
 
-  // Limit to exactly 1 high-priority candidate for ultra-simplified QR matrix density
-  const limitedCandidates = candidates.slice(0, 1);
+  // Limit to 4 candidates to guarantee connectivity across local WiFi and public cellular/internet (STUN) networks
+  const limitedCandidates = candidates.slice(0, 4);
 
   return { ufrag, pwd, fingerprint, candidates: limitedCandidates };
 }
@@ -105,7 +105,8 @@ function reconstructSDP(type: 'offer' | 'answer', params: any): string {
       if (Array.isArray(cand)) {
         ip = cand[0];
         port = cand[1];
-        type = cand[2] || 'host'; // Default to host if omitted
+        const t = cand[2];
+        type = t === 's' ? 'srflx' : 'host';
       } else {
         return;
       }
@@ -128,7 +129,7 @@ export function compressSDP(desc: { type: string; sdp: string }): string {
       u: params.ufrag,
       p: params.pwd,
       f: params.fingerprint,
-      c: params.candidates.map(cand => [cand[0], cand[1]]), // Omit the 'host' type string to save bytes
+      c: params.candidates.map(cand => [cand[0], cand[1], cand[2] === 'srflx' ? 's' : 'h']),
     });
     // Prefix 'v3_' for the new ultra-minified SDP
     return 'v3_' + LZString.compressToEncodedURIComponent(payload);

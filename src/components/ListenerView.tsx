@@ -535,9 +535,31 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
             {copiedAnswer ? 'COPIED!' : 'COPY CODE'}
           </button>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#12121A] border border-white/5 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold text-zinc-400">
-            <RefreshCw className="w-2.5 h-2.5 animate-spin text-[#00FF41]" />
-            <span>Awaiting verification...</span>
+          <div className="flex flex-col items-center gap-2.5 w-full">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#12121A] border border-white/5 rounded-lg text-4xs uppercase tracking-widest font-mono font-bold">
+              {connectionStatus === 'connecting' ? (
+                <>
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-500" />
+                  <span className="text-amber-400">Connecting to band...</span>
+                </>
+              ) : connectionStatus === 'failed' ? (
+                <>
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-red-400">Connection Failed</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin text-[#00FF41]" />
+                  <span className="text-zinc-400">Awaiting verification...</span>
+                </>
+              )}
+            </div>
+
+            {connectionStatus === 'failed' && (
+              <p className="text-red-400/80 text-[10px] font-mono uppercase tracking-wider max-w-[280px] leading-relaxed">
+                Handshake failed. Ensure both devices are on the same WiFi or have cellular data, then try pairing again.
+              </p>
+            )}
           </div>
 
           <button
