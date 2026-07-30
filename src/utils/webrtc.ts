@@ -61,8 +61,8 @@ function extractSDPParams(sdp: string) {
     return 0;
   });
 
-  // Limit to 4 candidates to guarantee connectivity across local WiFi and public cellular/internet (STUN) networks
-  const limitedCandidates = candidates.slice(0, 4);
+  // Limit to 3 candidates to guarantee connectivity across local WiFi and public cellular/internet (STUN) networks
+  const limitedCandidates = candidates.slice(0, 3);
 
   return { ufrag, pwd, fingerprint, candidates: limitedCandidates };
 }
@@ -109,7 +109,7 @@ function reconstructSDP(type: 'offer' | 'answer', params: any): string {
         ip = cand[0];
         port = cand[1];
         const t = cand[2];
-        type = t === 's' ? 'srflx' : 'host';
+        type = t === 's' || t === 'srflx' ? 'srflx' : 'host';
       } else {
         return;
       }
@@ -127,15 +127,10 @@ function reconstructSDP(type: 'offer' | 'answer', params: any): string {
 export function compressSDP(desc: { type: string; sdp: string }): string {
   try {
     const params = extractSDPParams(desc.sdp);
-    const payload = JSON.stringify({
-      t: desc.type === 'offer' ? 'o' : 'a',
-      u: params.ufrag,
-      p: params.pwd,
-      f: params.fingerprint,
-      c: params.candidates.map(cand => [cand[0], cand[1], cand[2] === 'srflx' ? 's' : 'h']),
-    });
-    // Prefix 'v3_' for the new ultra-minified SDP
-    return 'v3_' + LZString.compressToEncodedURIComponent(payload);
+    // Format: v4_t|u|p|f|ip1,port1,type1;ip2,port2,type2
+    const t = desc.type === 'offer' ? 'o' : 'a';
+    const cStr = params.candidates.map(cand => `${cand[0]},${cand[1]},${cand[2] === 'srflx' ? 's' : 'h'}`).join(';');
+    return `v4_${t}|${params.ufrag}|${params.pwd}|${params.fingerprint}|${cStr}`;
   } catch (err) {
     console.warn('Failed to compress minified SDP, falling back to full SDP compression:', err);
     const payload = JSON.stringify({
@@ -151,7 +146,30 @@ export function compressSDP(desc: { type: string; sdp: string }): string {
  */
 export function decompressSDP(compressed: string): RTCSessionDescriptionInit | null {
   try {
-    if (compressed.startsWith('v3_')) {
+    if (compressed.startsWith('v4_')) {
+      const parts = compressed.substring(3).split('|');
+      if (parts.length < 4) return null;
+      const t = parts[0];
+      const u = parts[1];
+      const p = parts[2];
+      const f = parts[3];
+      const cStr = parts[4] || '';
+      
+      const c = cStr ? cStr.split(';').map(candStr => {
+        const candParts = candStr.split(',');
+        return [candParts[0], parseInt(candParts[1], 10), candParts[2]];
+      }) : [];
+
+      const reconstructedSdp = reconstructSDP(
+        t === 'o' ? 'offer' : 'answer',
+        { u, p, f, c }
+      );
+
+      return {
+        type: t === 'o' ? 'offer' : 'answer',
+        sdp: reconstructedSdp,
+      };
+    } else if (compressed.startsWith('v3_')) {
       const raw = LZString.decompressFromEncodedURIComponent(compressed.substring(3));
       if (!raw) return null;
       const parsed = JSON.parse(raw);
