@@ -30,8 +30,8 @@ function extractSDPParams(sdp: string) {
       fingerprint = fp.replace(/:/g, '').toLowerCase();
     } else if (line.startsWith('a=candidate:')) {
       const lower = line.toLowerCase();
-      // Skip IPv6 candidates to keep QR code extremely simple
-      if (lower.includes('ip6') || lower.includes(':')) continue;
+      // Skip obvious IPv6 lines
+      if (lower.includes('ip6')) continue;
 
       const parts = line.split(' ');
       if (parts.length >= 8) {
@@ -39,7 +39,10 @@ function extractSDPParams(sdp: string) {
         const port = parseInt(parts[5], 10);
         const type = parts[7]; // e.g. 'host', 'srflx'
         
-        // Skip duplicate candidates or non-IPv4 to save space
+        // Skip IPv6 addresses (which contain colons)
+        if (ip.includes(':')) continue;
+        
+        // Skip duplicate candidates to save space
         if (ip && port && !candidates.some(c => c[0] === ip && c[1] === port)) {
           candidates.push([ip, port, type]);
         }
