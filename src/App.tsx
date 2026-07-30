@@ -19,7 +19,7 @@ export default function App() {
     const handlePopState = (e: PopStateEvent) => {
       if (e.state && typeof e.state.role === 'string') {
         setRole(e.state.role as AppRole);
-      } else {
+      } else if (!e.state) {
         setRole('select');
       }
     };
@@ -37,9 +37,7 @@ export default function App() {
   };
 
   const handleExitConductor = () => {
-    if (confirm('Leave Conductor mode? This will disconnect all paired listeners.')) {
-      changeRole('select');
-    }
+    changeRole('select');
   };
 
   const handleExitListener = () => {

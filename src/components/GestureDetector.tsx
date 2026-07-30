@@ -274,11 +274,99 @@ export default function GestureDetector({ onGestureTriggered, activeChord }: Ges
 
   if (loadingState === 'loading') {
     return (
-      <div id="gesture_loader" className="flex flex-col items-center justify-center p-8 bg-[#12121A] border-2 border-[#2D2D3F] rounded-xl max-w-md mx-auto text-center gap-4 shadow-xl">
-        <RefreshCw className="w-10 h-10 animate-spin text-[#00FF41]" />
-        <div>
-          <h3 className="font-mono font-bold text-sm text-white uppercase tracking-wider">Initializing Gesture Engine</h3>
-          <p className="text-[#8E9299] text-4xs font-mono uppercase tracking-widest mt-1.5">{loadingProgress}</p>
+      <div id="gesture_loader" className="flex flex-col lg:flex-row gap-6 w-full max-w-5xl mx-auto animate-pulse select-none">
+        {/* Left Column: Camera Live Feed Skeleton Mockup */}
+        <div className="flex-1 flex flex-col bg-white/[0.01] border border-white/5 rounded-2xl overflow-hidden relative shadow-2xl min-h-[300px] md:min-h-[350px]">
+          {/* Header Mockup */}
+          <div className="p-3.5 bg-black/20 flex items-center justify-between border-b border-white/5">
+            <div className="flex items-center gap-2 text-zinc-500 text-xs font-mono font-bold uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-[#00FF41]/40 animate-ping" />
+              <span>INITIALIZING SYSTEM...</span>
+            </div>
+            <div className="w-20 h-5 bg-white/5 rounded-lg border border-white/10" />
+          </div>
+
+          {/* Large Feed Area with active laser scanner scan lines */}
+          <div className="relative flex-1 bg-[#050508]/60 flex flex-col items-center justify-center p-6 overflow-hidden min-h-[220px]">
+            {/* Horizontal glowing laser scan bar */}
+            <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#00FF41]/45 to-transparent shadow-[0_0_10px_rgba(0,255,65,0.4)] pointer-events-none animate-scan" />
+
+            {/* Matrix HUD Corner Elements */}
+            <div className="absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-white/10" />
+            <div className="absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-white/10" />
+            <div className="absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-white/10" />
+            <div className="absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-white/10" />
+
+            {/* Futuristic Skeleton Loader Display Box */}
+            <div className="bg-[#12121A]/90 border border-[#00FF41]/15 rounded-2xl p-5 max-w-sm w-full relative z-10 text-center shadow-[0_0_30px_rgba(0,255,65,0.03)] backdrop-blur-md">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="w-1.5 h-1.5 bg-[#00FF41] rounded-full animate-pulse" />
+                <span className="text-[9px] font-mono text-[#00FF41] uppercase tracking-widest font-extrabold">BOOT SEQUENCE ACTIVE</span>
+              </div>
+              <h3 className="font-mono font-extrabold text-xs text-white uppercase tracking-wider mb-2">[ GESTURE ENGINE COLD-START ]</h3>
+              
+              {/* Dynamic skeleton progress loading bar */}
+              <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden mb-3 relative">
+                <div className="bg-[#00FF41] h-full rounded-full absolute top-0 left-0 w-3/5 overflow-hidden">
+                  <div className="w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-progress" />
+                </div>
+              </div>
+
+              <p className="text-[#8E9299] text-[9px] font-mono uppercase tracking-widest leading-relaxed truncate px-1">
+                {loadingProgress}
+              </p>
+            </div>
+
+            {/* Futuristic terminal labels */}
+            <div className="absolute bottom-3 left-4 text-[7px] font-mono text-zinc-600 flex gap-4 uppercase">
+              <span>SYS_INIT: OK</span>
+              <span>GPU_ACCEL: REQ</span>
+            </div>
+            <div className="absolute bottom-3 right-4 text-[7px] font-mono text-zinc-600 flex gap-4 uppercase">
+              <span>WASM_LOAD: COMPILING</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Skeleton of Detected Gesture & Diagnostic Sidebar Panel */}
+        <div className="w-full lg:w-80 flex flex-col gap-3">
+          {/* Detected Gesture Skeleton */}
+          <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl flex flex-col gap-2.5 relative">
+            <div className="w-20 h-2 bg-white/5 rounded-sm" />
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-center">
+                <div className="w-5 h-5 bg-white/5 rounded-full" />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <div className="w-2/3 h-3 bg-white/5 rounded-sm" />
+                <div className="w-1/2 h-2 bg-white/5 rounded-sm" />
+              </div>
+            </div>
+            <div className="border-t border-white/5 pt-2.5 mt-0.5 flex justify-between">
+              <div className="space-y-1">
+                <div className="w-14 h-2 bg-white/5 rounded-sm" />
+                <div className="w-10 h-3 bg-white/5 rounded-sm" />
+              </div>
+              <div className="w-14 h-4 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full" />
+            </div>
+          </div>
+
+          {/* Toggle Diagnostics Button Skeleton */}
+          <div className="w-full h-8 bg-white/5 border border-white/5 rounded-xl" />
+
+          {/* System Calibration Skeleton */}
+          <div className="p-4 bg-white/[0.01] border border-white/5 rounded-2xl flex flex-col gap-2.5">
+            <div className="w-24 h-2 bg-white/5 rounded-sm" />
+            <div className="space-y-2">
+              <div className="w-full h-6 bg-white/5 rounded-lg" />
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="h-6 bg-white/[0.02] border border-white/5 rounded-lg" />
+                <div className="h-6 bg-white/[0.02] border border-white/5 rounded-lg" />
+                <div className="h-6 bg-white/[0.02] border border-white/5 rounded-lg" />
+                <div className="h-6 bg-white/[0.02] border border-white/5 rounded-lg" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

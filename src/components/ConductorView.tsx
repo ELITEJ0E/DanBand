@@ -94,43 +94,70 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showCheatSheet, setShowCheatSheet] = useState<boolean>(false);
 
+  // Handle toggling and history states for guide and settings
+  const openCheatSheet = () => {
+    setShowCheatSheet(true);
+    window.history.pushState({ role: 'conductor', overlay: 'guide' }, '');
+  };
+
+  const closeCheatSheet = () => {
+    setShowCheatSheet(false);
+    if (window.history.state?.overlay === 'guide') {
+      window.history.back();
+    }
+  };
+
+  const toggleSettings = () => {
+    const nextVal = !showSettings;
+    setShowSettings(nextVal);
+    if (nextVal) {
+      window.history.pushState({ role: 'conductor', overlay: 'settings' }, '');
+    } else {
+      if (window.history.state?.overlay === 'settings') {
+        window.history.back();
+      }
+    }
+  };
+
   // Sync state with browser history for back-button support on mobile
   useEffect(() => {
-    const isAnyOverlayActive = showCheatSheet || pairingStep !== 'idle' || showSettings;
-
-    const handlePopState = () => {
-      if (showCheatSheet) {
+    const handlePopState = (e: PopStateEvent) => {
+      if (showCheatSheet && e.state?.overlay !== 'guide') {
         setShowCheatSheet(false);
       }
-      if (pairingStep !== 'idle') {
+      if (showSettings && e.state?.overlay !== 'settings') {
+        setShowSettings(false);
+      }
+      if (pairingStep !== 'idle' && e.state?.overlay !== 'pairing') {
         // Stop scanner if active
         if (scannerRef.current) {
           try {
             if (scannerRef.current.isScanning) {
               scannerRef.current.stop();
             }
-          } catch (e) {
-            console.error('Error stopping scanner from popstate:', e);
+          } catch (err) {
+            console.error('Error stopping scanner from popstate:', err);
           }
           scannerRef.current = null;
         }
         setScannerActive(false);
         setPairingStep('idle');
       }
-      if (showSettings) {
-        setShowSettings(false);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showCheatSheet) {
+        closeCheatSheet();
       }
     };
 
-    if (isAnyOverlayActive) {
-      window.history.pushState({ isOverlayActive: true }, '');
-    }
-
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showCheatSheet, pairingStep, showSettings]);
+  }, [showCheatSheet, showSettings, pairingStep]);
 
   // Clean up all connections on unmount
   useEffect(() => {
@@ -188,6 +215,9 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
     try {
       setPairingError(null);
       setPairingStep('generating_offer');
+      if (window.history.state?.overlay !== 'pairing') {
+        window.history.pushState({ role: 'conductor', overlay: 'pairing' }, '');
+      }
 
       const id = reconnectId || 'listener_' + Math.random().toString(36).substring(2, 11);
       const name = reconnectName || `Listener #${connections.length + 1}`;
@@ -296,6 +326,10 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
     setPairingStep('idle');
     setPairingError(null);
     setManualAnswerInput('');
+
+    if (window.history.state?.overlay === 'pairing') {
+      window.history.back();
+    }
   };
 
   // Start camera scanner to read Listener's Answer QR
@@ -365,6 +399,9 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
       await activeConn.peerConnection.setRemoteDescription(decompressed);
       setPairingStep('idle');
       setManualAnswerInput('');
+      if (window.history.state?.overlay === 'pairing') {
+        window.history.back();
+      }
       
       // Send active chord over to the newly connected listener immediately
       if (activeChord !== '—') {
@@ -469,7 +506,7 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
           </span>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
-              onClick={() => setShowCheatSheet(true)}
+              onClick={openCheatSheet}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-3xs sm:text-2xs border border-[#00FF41]/25 bg-[#00FF41]/5 text-[#00FF41] hover:bg-[#00FF41]/10 rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97"
             >
               <HelpCircle className="w-3.5 h-3.5 text-[#00FF41]" />
@@ -485,7 +522,7 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
             </button>
             
             <button
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={toggleSettings}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-3xs sm:text-2xs border rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97 ${
                 showSettings 
                   ? 'bg-[#00FF41]/10 border-[#00FF41] text-[#00FF41]' 
@@ -493,7 +530,7 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
               }`}
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>{showSettings ? 'CLOSE MAP' : 'EDIT MAP'}</span>
+              <span>{showSettings ? 'CLOSE' : 'EDIT'}</span>
             </button>
           </div>
         </div>
@@ -710,11 +747,28 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
             <div className="p-6 flex flex-col items-center text-center gap-5">
               
               {pairingStep === 'generating_offer' && (
-                <div className="py-8 flex flex-col items-center justify-center gap-3">
-                  <RotateCcw className="w-8 h-8 animate-spin text-[#00FF41]" />
-                  <div>
-                    <h3 className="font-mono font-bold text-white text-xs uppercase tracking-wider">Generating Offer</h3>
-                    <p className="text-[#8E9299] text-3xs mt-1 font-mono">{loadingProgress}</p>
+                <div className="w-full py-6 flex flex-col items-center justify-center gap-5">
+                  <div className="relative w-16 h-16 flex items-center justify-center">
+                    {/* Pulsing ring outer */}
+                    <div className="absolute inset-0 rounded-full border border-[#00FF41]/20 animate-ping duration-1000" />
+                    {/* Rotating radar sweep */}
+                    <div className="absolute inset-1.5 rounded-full border border-dashed border-[#00FF41]/40 animate-spin [animation-duration:3s]" />
+                    {/* Core pulsing dot */}
+                    <div className="w-3.5 h-3.5 rounded-full bg-[#00FF41] shadow-[0_0_12px_rgba(0,255,65,0.65)] animate-pulse" />
+                  </div>
+                  <div className="space-y-2 w-full">
+                    <h3 className="font-mono font-extrabold text-white text-xs uppercase tracking-widest flex items-center justify-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#00FF41] animate-pulse" />
+                      GENERATING QR CODE...
+                    </h3>
+                    <div className="w-48 bg-white/5 h-1 rounded-full overflow-hidden mx-auto relative">
+                      <div className="bg-[#00FF41] h-full rounded-full absolute top-0 left-0 w-3/4 overflow-hidden">
+                        <div className="w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-progress" />
+                      </div>
+                    </div>
+                    <p className="text-zinc-500 text-[9px] font-mono uppercase tracking-widest max-w-[240px] mx-auto leading-relaxed truncate px-1">
+                      {loadingProgress || 'Initializing WebRTC loop...'}
+                    </p>
                   </div>
                 </div>
               )}
@@ -842,8 +896,17 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
 
       {/* Interactive Modal / Dialog Component Guide for Conductors */}
       {showCheatSheet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in" role="dialog" aria-modal="true">
-          <div className="bg-[#0b0b12] border-2 border-[#00FF41]/20 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,255,65,0.12)]">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer" 
+          role="dialog" 
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeCheatSheet();
+            }
+          }}
+        >
+          <div className="bg-[#0b0b12] border-2 border-[#00FF41]/20 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,255,65,0.12)] cursor-default">
             {/* Header */}
             <div className="p-5 border-b border-white/5 bg-black/40 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -860,7 +923,7 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
                 </div>
               </div>
               <button
-                onClick={() => setShowCheatSheet(false)}
+                onClick={closeCheatSheet}
                 className="p-1.5 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition duration-200 cursor-pointer"
                 title="Close guide"
               >
@@ -869,7 +932,7 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 hover:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent scroll-smooth">
               
               {/* Tutorial Overview banner */}
               <div className="p-4.5 bg-[#00FF41]/5 border border-[#00FF41]/15 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center">
@@ -952,7 +1015,7 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
             {/* Footer */}
             <div className="p-4 bg-black/40 border-t border-white/5 flex justify-end">
               <button
-                onClick={() => setShowCheatSheet(false)}
+                onClick={closeCheatSheet}
                 className="px-6 py-2 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-3xs font-mono font-bold rounded-xl transition-all duration-200 uppercase tracking-widest cursor-pointer"
               >
                 GOT IT

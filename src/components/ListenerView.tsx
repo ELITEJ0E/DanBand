@@ -481,10 +481,29 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
 
       {/* 3. Generating Answer Loading State */}
       {pairingStep === 'generating_answer' && (
-        <div id="listener_generating_card" className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full gap-3 text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-[#00FF41]" />
-          <h3 className="font-mono font-bold text-white text-xs uppercase tracking-wider">Processing Network Offer</h3>
-          <p className="text-[#8E9299] text-4xs font-mono uppercase tracking-widest mt-1">Generating hand-shaking QR answer...</p>
+        <div id="listener_generating_card" className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full gap-5 text-center py-6">
+          <div className="relative w-16 h-16 flex items-center justify-center">
+            {/* Pulsing ring outer */}
+            <div className="absolute inset-0 rounded-full border border-[#00FF41]/20 animate-ping duration-1000" />
+            {/* Rotating radar sweep */}
+            <div className="absolute inset-1.5 rounded-full border border-dashed border-[#00FF41]/40 animate-spin [animation-duration:3s]" />
+            {/* Core pulsing dot */}
+            <div className="w-3.5 h-3.5 rounded-full bg-[#00FF41] shadow-[0_0_12px_rgba(0,255,65,0.65)] animate-pulse" />
+          </div>
+          <div className="space-y-2 w-full">
+            <h3 className="font-mono font-extrabold text-white text-xs uppercase tracking-widest flex items-center justify-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00FF41] animate-pulse" />
+              GENERATING QR ANSWER...
+            </h3>
+            <div className="w-48 bg-white/5 h-1 rounded-full overflow-hidden mx-auto relative">
+              <div className="bg-[#00FF41] h-full rounded-full absolute top-0 left-0 w-3/4 overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-progress" />
+              </div>
+            </div>
+            <p className="text-zinc-500 text-[9px] font-mono uppercase tracking-widest max-w-[240px] mx-auto leading-relaxed">
+              Synthesizing local media network credentials...
+            </p>
+          </div>
         </div>
       )}
 
