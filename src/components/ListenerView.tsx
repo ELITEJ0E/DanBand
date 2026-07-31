@@ -17,14 +17,20 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  ArrowLeft
+  ArrowLeft,
+  Download
 } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallModal } from './PWAInstallModal';
 
 interface ListenerViewProps {
   onExit?: () => void;
 }
 
 export default function ListenerView({ onExit }: ListenerViewProps) {
+  // PWA Install hook
+  const pwa = usePWAInstall();
+
   // Local Settings
   const [displayName, setDisplayName] = useState<string>(() => {
     return localStorage.getItem('banddan_display_name') || 'Keys';
@@ -334,11 +340,11 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
             {onExit && (
               <button
                 onClick={onExit}
-                className="flex items-center gap-1 px-2 py-1 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 text-4xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 uppercase tracking-wider"
-                title="Exit Session"
+                className="flex items-center gap-1 px-2 py-1 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 text-4xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 uppercase tracking-wider shrink-0"
+                title="Quit Session"
               >
                 <ArrowLeft className="w-3 h-3" />
-                <span>EXIT</span>
+                <span>QUIT</span>
               </button>
             )}
             <div className="flex items-center gap-2">
@@ -352,28 +358,41 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
             </div>
           </div>
 
-          {/* Local sound controls for bandmate */}
-          <button
-            onClick={toggleSound}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200 ${
-              soundEnabled
-                ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/15 shadow-[0_0_10px_rgba(0,255,65,0.08)]'
-                : 'border-white/5 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
-            }`}
-            title={soundEnabled ? 'Disable Sound' : 'Enable Sound'}
-          >
-            {soundEnabled ? (
-              <>
-                <Volume2 className="w-3 h-3 text-[#00FF41]" />
-                <span className="hidden xs:inline">ON</span>
-              </>
-            ) : (
-              <>
-                <VolumeX className="w-3 h-3 text-zinc-500" />
-                <span className="hidden xs:inline">OFF</span>
-              </>
+          <div className="flex items-center gap-2">
+            {!pwa.isStandalone && (
+              <button
+                onClick={pwa.triggerInstall}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/20 text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200"
+                title="Install BandDan App"
+              >
+                <Download className="w-3 h-3 text-[#00FF41]" />
+                <span className="hidden xs:inline">INSTALL</span>
+              </button>
             )}
-          </button>
+
+            {/* Local sound controls for bandmate */}
+            <button
+              onClick={toggleSound}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200 ${
+                soundEnabled
+                  ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/15 shadow-[0_0_10px_rgba(0,255,65,0.08)]'
+                  : 'border-white/5 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+              }`}
+              title={soundEnabled ? 'Disable Sound' : 'Enable Sound'}
+            >
+              {soundEnabled ? (
+                <>
+                  <Volume2 className="w-3 h-3 text-[#00FF41]" />
+                  <span className="hidden xs:inline">ON</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3 h-3 text-zinc-500" />
+                  <span className="hidden xs:inline">OFF</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -643,6 +662,15 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
 
         </div>
       )}
+
+      {/* PWA Install Modal */}
+      <PWAInstallModal
+        isOpen={pwa.showModal}
+        onClose={pwa.closeModal}
+        onInstall={pwa.triggerInstall}
+        isIOS={pwa.isIOS}
+        hasDeferredPrompt={pwa.hasDeferredPrompt}
+      />
 
     </div>
   );

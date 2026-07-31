@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { RTC_CONFIG, compressSDP, decompressSDP, waitForIceGathering } from '../utils/webrtc';
 import { loadActivePresetId, loadPresets } from '../utils/presets';
-import { playChordSound } from '../utils/audio';
+import { playChordSound, playDynamicSynthChord, CHROMATIC_NOTES } from '../utils/audio';
 import GestureDetector from './GestureDetector';
 import ChordMappingSettings from './ChordMappingSettings';
 import { 
@@ -30,14 +30,21 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
-  ArrowLeft
+  ArrowLeft,
+  Music,
+  Download
 } from 'lucide-react';
+import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallModal } from './PWAInstallModal';
 
 interface ConductorViewProps {
   onExit?: () => void;
 }
 
 export default function ConductorView({ onExit }: ConductorViewProps) {
+  // PWA Install hook
+  const pwa = usePWAInstall();
+
   // Preset state
   const [presets, setPresets] = useState<Preset[]>(loadPresets);
   const [activePreset, setActivePreset] = useState<Preset>(() => {
@@ -49,6 +56,9 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
   const [connections, setConnections] = useState<ListenerConnection[]>([]);
   const [activeChord, setActiveChord] = useState<string>('—');
   const [lastBroadcastTime, setLastBroadcastTime] = useState<number>(0);
+  const [performanceMode, setPerformanceMode] = useState<'single' | 'dual'>('single');
+  const [rootKey, setRootKey] = useState<string>('C');
+  const [scaleMode, setScaleMode] = useState<'major' | 'minor'>('major');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     return localStorage.getItem('banddan_sound_enabled') === 'true';
   });
@@ -438,36 +448,47 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
       <div className="absolute bottom-20 left-10 w-[40%] aspect-square rounded-full bg-[#3B82F6]/3 blur-[120px] pointer-events-none" />
 
       {/* Specialist Hardware Telemetry Header */}
-      <div className="w-full border-b border-white/5 bg-black/40 backdrop-blur-md px-4 py-3 sticky top-0 z-30 shadow-md">
+      <div className="w-full border-b border-white/5 bg-black/40 backdrop-blur-md px-2.5 sm:px-4 py-2 sm:py-3 sticky top-0 z-30 shadow-md">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {onExit && (
               <button
                 onClick={onExit}
-                className="flex items-center gap-1 px-2 py-1 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 text-4xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 uppercase tracking-wider"
-                title="Exit Session"
+                className="flex items-center gap-1 px-2 py-1 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 text-4xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 uppercase tracking-wider shrink-0"
+                title="Quit Session"
               >
                 <ArrowLeft className="w-3 h-3" />
-                <span>EXIT</span>
+                <span>QUIT</span>
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#00FF41] animate-ping shrink-0" />
-              <h1 className="text-base md:text-xl font-extrabold tracking-tighter text-white uppercase select-none">
-                BAND<span className="text-[#00FF41] drop-shadow-[0_0_10px_rgba(0,255,65,0.35)]">DAN</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-[#00FF41] shrink-0" />
+              <h1 className="text-sm sm:text-base md:text-xl font-extrabold tracking-tighter text-white uppercase select-none truncate">
+                BAND<span className="text-[#00FF41]">DAN</span>
               </h1>
-              <div className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full text-[8px] font-mono tracking-wider text-[#00FF41] font-bold">
+              <div className="hidden xs:inline-block px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-full text-[8px] font-mono tracking-wider text-[#00FF41] font-bold shrink-0">
                 CONDUCTOR
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            {!pwa.isStandalone && (
+              <button
+                onClick={pwa.triggerInstall}
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/20 text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200"
+                title="Install BandDan App"
+              >
+                <Download className="w-3 h-3 text-[#00FF41]" />
+                <span className="hidden xs:inline">INSTALL</span>
+              </button>
+            )}
+
             <button
               onClick={toggleSound}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200 ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border text-4xs font-mono font-bold uppercase tracking-widest cursor-pointer transition-all duration-200 ${
                 soundEnabled
-                  ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/15 shadow-[0_0_10px_rgba(0,255,65,0.08)]'
+                  ? 'border-[#00FF41]/30 bg-[#00FF41]/10 text-[#00FF41] hover:bg-[#00FF41]/15'
                   : 'border-white/5 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
               }`}
               title={soundEnabled ? 'Disable Synth' : 'Enable Synth'}
@@ -485,10 +506,10 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
               )}
             </button>
 
-            <div className="flex font-mono text-[9px]">
-              <div className="flex flex-col text-right">
-                <span className="text-[#8E9299] uppercase text-[8px]">Bandmates</span>
-                <span className="text-[#00FF41] font-bold">
+            <div className="flex font-mono shrink-0 items-center">
+              <div className="flex flex-col text-right leading-none">
+                <span className="text-[#8E9299] uppercase text-[7px] sm:text-[8px] tracking-wider mb-0.5">Bandmates</span>
+                <span className="text-[#00FF41] font-bold text-3xs sm:text-2xs">
                   {connections.filter((c) => c.status === 'connected').length.toString().padStart(2, '0')}
                 </span>
               </div>
@@ -499,15 +520,61 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
 
       <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4 md:gap-6 relative z-10">
         
-        {/* Quick control actions */}
-        <div className="flex items-center justify-between gap-3 bg-white/[0.02] backdrop-blur-md border border-white/5 p-3 rounded-2xl shadow-xl">
-          <span className="hidden sm:inline text-4xs uppercase font-mono font-bold tracking-widest text-[#8E9299] pl-1 select-none">
-            CONDUX PANEL
-          </span>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        {/* Quick control actions & Key / Scale selector */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white/[0.02] backdrop-blur-md border border-white/5 p-2.5 sm:p-3 rounded-2xl shadow-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="hidden sm:inline text-4xs uppercase font-mono font-bold tracking-widest text-[#8E9299] pl-1 select-none">
+              MODE:
+            </span>
+            <div className="flex bg-black/40 border border-white/10 rounded-xl p-1 font-mono text-3xs font-bold">
+              <button
+                onClick={() => setPerformanceMode('single')}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                  performanceMode === 'single'
+                    ? 'bg-[#00FF41] text-black font-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                1-HAND
+              </button>
+              <button
+                onClick={() => setPerformanceMode('dual')}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                  performanceMode === 'dual'
+                    ? 'bg-[#00FF41] text-black font-black'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                2-HAND
+              </button>
+            </div>
+
+            {/* Key & Scale selector when 2-Hand Synth mode is active */}
+            {performanceMode === 'dual' && (
+              <div className="flex items-center gap-1.5 sm:border-l sm:border-white/10 sm:pl-2">
+                <select
+                  value={rootKey}
+                  onChange={(e) => setRootKey(e.target.value)}
+                  className="bg-black/60 border border-[#00FF41]/30 rounded-lg px-2 py-1 text-3xs font-mono font-bold text-[#00FF41] focus:outline-none cursor-pointer"
+                >
+                  {CHROMATIC_NOTES.map((k) => (
+                    <option key={k} value={k} className="bg-zinc-900 text-white">KEY: {k}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setScaleMode(scaleMode === 'major' ? 'minor' : 'major')}
+                  className="px-2 py-1 bg-[#00FF41]/10 border border-[#00FF41]/30 rounded-lg text-3xs font-mono font-bold text-[#00FF41] hover:bg-[#00FF41]/20 cursor-pointer uppercase"
+                >
+                  {scaleMode}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <button
               onClick={openCheatSheet}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-3xs sm:text-2xs border border-[#00FF41]/25 bg-[#00FF41]/5 text-[#00FF41] hover:bg-[#00FF41]/10 rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1.5 text-3xs border border-[#00FF41]/25 bg-[#00FF41]/5 text-[#00FF41] hover:bg-[#00FF41]/10 rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97"
             >
               <HelpCircle className="w-3.5 h-3.5 text-[#00FF41]" />
               <span>GUIDE</span>
@@ -515,15 +582,15 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
 
             <button
               onClick={() => startPairingFlow()}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-3xs sm:text-2xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer shadow-[0_4px_12px_rgba(0,255,65,0.15)]"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-97 text-black text-3xs font-mono font-bold rounded-xl transition-all duration-200 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>CONNECT</span>
             </button>
-            
+
             <button
               onClick={toggleSettings}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 text-3xs sm:text-2xs border rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97 ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1.5 text-3xs border rounded-xl font-mono font-bold transition-all duration-200 cursor-pointer active:scale-97 ${
                 showSettings 
                   ? 'bg-[#00FF41]/10 border-[#00FF41] text-[#00FF41]' 
                   : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:border-white/20'
@@ -567,6 +634,26 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
               <GestureDetector 
                 onGestureTriggered={handleGestureTriggered} 
                 activeChord={activeChord}
+                gestureSynthMode={performanceMode === 'dual'}
+                rootKey={rootKey}
+                scaleMode={scaleMode}
+                onModeToggle={(m) => setPerformanceMode(m)}
+                onSynthChordChange={(chord, params) => {
+                  if (chord !== '—') {
+                    broadcastChord(chord);
+                    if (soundEnabled && params) {
+                      playDynamicSynthChord(rootKey, scaleMode, params.degree, {
+                        inversion: params.inversion,
+                        seventhType: params.seventhType,
+                        octaveOffset: params.octaveOffset,
+                        filterCutoff: params.filterCutoff,
+                        volume: params.volume
+                      });
+                    }
+                  } else {
+                    setActiveChord('—');
+                  }
+                }}
               />
             </section>
           </div>
@@ -932,82 +1019,174 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 hover:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent scroll-smooth">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 hover:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent scroll-smooth">
               
-              {/* Tutorial Overview banner */}
-              <div className="p-4.5 bg-[#00FF41]/5 border border-[#00FF41]/15 rounded-2xl flex flex-col md:flex-row gap-4 items-start md:items-center">
-                <div className="p-2.5 bg-[#00FF41]/10 rounded-xl border border-[#00FF41]/20 shrink-0">
-                  <Video className="w-6 h-6 text-[#00FF41]" />
-                </div>
-                <div>
-                  <h3 className="text-3xs font-mono font-bold text-[#00FF41] uppercase tracking-wider">How Conductor Mode Works</h3>
-                  <p className="text-4xs md:text-3xs text-zinc-300 leading-relaxed mt-1 font-mono uppercase tracking-wide">
-                    Position your hand clearly within the camera feed. Keep your fingers visible, flat, and pointing upward.
-                    Hold any gesture steady for <span className="text-[#00FF41] font-bold">150ms</span> to instantly broadcast the corresponding chord
-                    to all synchronized bandmates.
-                  </p>
-                </div>
-              </div>
-
-              {/* Grid of Gestures */}
-              <div>
-                <h3 className="text-4xs font-mono font-bold text-[#8E9299] uppercase tracking-widest mb-3.5">
-                  AVAILABLE GESTURES ({GESTURES.length}) & LIVE ASSIGNMENTS:
-                </h3>
+              {/* Mode Explanation Sections */}
+              <div className="space-y-6">
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {GESTURES.map((gesture) => {
-                    const mappedChord = activePreset.mappings.find((m) => m.gestureId === gesture.id)?.chord || '—';
-                    return (
-                      <div 
-                        key={gesture.id}
-                        className="p-3.5 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-between gap-3 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-200"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl bg-black/40 p-2.5 rounded-xl border border-white/5 min-w-[3.2rem] text-center shadow-inner">
-                            {gesture.emoji}
-                          </div>
-                          <div>
-                            <div className="font-mono font-bold text-3xs text-white uppercase tracking-wider">
-                              {gesture.name}
-                            </div>
-                            <div className="text-[9px] font-mono text-zinc-500 uppercase leading-tight mt-0.5">
-                              {gesture.description}
-                            </div>
-                          </div>
-                        </div>
+                {/* 1-Hand Preset Mode Section */}
+                <div className="p-4 bg-white/[0.02] border border-white/10 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2.5 border-b border-white/5 pb-3">
+                    <div className="p-1.5 bg-[#00FF41]/10 rounded-lg border border-[#00FF41]/20">
+                      <Camera className="w-4 h-4 text-[#00FF41]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-mono font-bold text-[#00FF41] uppercase tracking-wider">
+                        1-Hand Preset Mode
+                      </h3>
+                      <p className="text-3xs text-zinc-400 font-mono uppercase tracking-wide mt-0.5">
+                        Raise single-hand gestures to trigger mapped chord presets instantly.
+                      </p>
+                    </div>
+                  </div>
 
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className="text-[8px] font-mono text-[#8E9299] uppercase tracking-widest">Triggers</span>
-                          <span className="px-2.5 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/35 rounded-lg font-mono text-[#00FF41] font-bold text-xs shadow-[0_0_12px_rgba(0,255,65,0.1)]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {GESTURES.map((gesture) => {
+                      const mappedChord = activePreset.mappings.find((m) => m.gestureId === gesture.id)?.chord || '—';
+                      return (
+                        <div 
+                          key={gesture.id}
+                          className="p-3 bg-black/30 border border-white/5 rounded-xl flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-2xl bg-black/40 p-1.5 rounded-lg border border-white/5 min-w-[2.5rem] text-center">
+                              {gesture.emoji}
+                            </span>
+                            <div>
+                              <div className="font-mono font-bold text-2xs text-white uppercase tracking-wider">
+                                {gesture.name}
+                              </div>
+                              <div className="text-[10px] font-mono text-zinc-500 uppercase leading-tight mt-0.5">
+                                {gesture.description}
+                              </div>
+                            </div>
+                          </div>
+
+                          <span className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/30 rounded-lg font-mono text-[#00FF41] font-bold text-2xs shrink-0">
                             {mappedChord}
                           </span>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              {/* Tips Section */}
-              <div className="pt-2 border-t border-white/5">
-                <h4 className="text-4xs font-mono font-bold text-[#8E9299] uppercase tracking-widest mb-3">
-                  💡 Tips for Perfect Recognition:
-                </h4>
-                <ul className="space-y-2 text-[10px] font-mono text-zinc-400 uppercase tracking-wide leading-relaxed">
-                  <li className="flex gap-2">
-                    <span className="text-[#00FF41]">•</span>
-                    <span><strong>Good Lighting:</strong> Make sure your hand is well-lit so joint locations are recognized instantly.</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-[#00FF41]">•</span>
-                    <span><strong>Keep Hand Flat:</strong> Present your palm face-on to the camera to optimize skeleton tracking.</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-[#00FF41]">•</span>
-                    <span><strong>Separate Your Fingers:</strong> Spread your fingers clearly when presenting 1 to 5 to avoid overlap detection.</span>
-                  </li>
-                </ul>
+                {/* 2-Hand Dual Synth Performance Tutorial Section */}
+                <div className="p-4 bg-[#0A1A0F]/60 border border-[#00FF41]/30 rounded-2xl space-y-4 shadow-[0_0_20px_rgba(0,255,65,0.08)]">
+                  <div className="flex items-center gap-2.5 border-b border-[#00FF41]/20 pb-3">
+                    <div className="p-1.5 bg-[#00FF41]/15 rounded-lg border border-[#00FF41]/30">
+                      <Music className="w-4 h-4 text-[#00FF41]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-mono font-bold text-[#00FF41] uppercase tracking-wider">
+                        2-Hand Dual Synth Performance Mode
+                      </h3>
+                      <p className="text-3xs text-zinc-300 font-mono uppercase tracking-wide mt-0.5">
+                        Perform live expressive harmony with dual hands in real time.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left Hand Tutorial Card */}
+                    <div className="p-3.5 bg-black/40 border border-[#00FF41]/20 rounded-xl space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <span className="text-[#00FF41] text-2xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#00FF41]" />
+                          LEFT HAND: DIATONIC HARMONY
+                        </span>
+                      </div>
+                      <ul className="space-y-1.5 text-3xs font-mono text-zinc-300 leading-relaxed">
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">☝️ 1 Finger:</span>
+                          <span className="text-[#00FF41] font-bold">Degree I (Tonic)</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">✌️ 2 Fingers:</span>
+                          <span className="text-[#00FF41] font-bold">Degree II (Supertonic)</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">🤟 3 Fingers:</span>
+                          <span className="text-[#00FF41] font-bold">Degree III (Mediant)</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">🖐️ 4 Fingers:</span>
+                          <span className="text-[#00FF41] font-bold">Degree IV (Subdominant)</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">🖐️ 5 Fingers:</span>
+                          <span className="text-[#00FF41] font-bold">Degree V (Dominant)</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">🤙 Shaka / 🤘 Rock:</span>
+                          <span className="text-[#00FF41] font-bold">Degrees VI / VII</span>
+                        </li>
+                        <li className="flex justify-between pt-0.5">
+                          <span className="text-zinc-400">🔄 Wrist Tilt:</span>
+                          <span className="text-amber-400 font-bold">Major ↔ Minor Mode</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Right Hand Tutorial Card */}
+                    <div className="p-3.5 bg-black/40 border border-[#39FF14]/20 rounded-xl space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <span className="text-[#39FF14] text-2xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#39FF14]" />
+                          RIGHT HAND: MODULATOR & EXPRESSION
+                        </span>
+                      </div>
+                      <ul className="space-y-1.5 text-3xs font-mono text-zinc-300 leading-relaxed">
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">☝️ 1 Finger:</span>
+                          <span className="text-[#39FF14] font-bold">Root Position</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">✌️ 2 Fingers:</span>
+                          <span className="text-[#39FF14] font-bold">1st Inversion</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">🤟 3 Fingers:</span>
+                          <span className="text-[#39FF14] font-bold">7th Chord Extension</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">👍 Thumb Extended/Folded:</span>
+                          <span className="text-[#39FF14] font-bold">High / Low Octave</span>
+                        </li>
+                        <li className="flex justify-between border-b border-white/5 pb-1">
+                          <span className="text-zinc-400">↕️ Vertical Height:</span>
+                          <span className="text-[#39FF14] font-bold">Synth Volume Modulation</span>
+                        </li>
+                        <li className="flex justify-between pt-0.5">
+                          <span className="text-zinc-400">🔄 Wrist Angle:</span>
+                          <span className="text-[#39FF14] font-bold">Filter Cutoff Sweep</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance Tips */}
+                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2">
+                  <h4 className="text-3xs font-mono font-bold text-[#8E9299] uppercase tracking-wider">
+                    💡 Performance Tips for Clear Gesture Tracking:
+                  </h4>
+                  <ul className="grid grid-cols-1 md:grid-cols-3 gap-2 text-3xs font-mono text-zinc-300 leading-relaxed">
+                    <li className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      <strong className="text-[#00FF41] block mb-1">1. Frame Placement</strong>
+                      Keep hands clearly inside camera view and separate from your chest or face.
+                    </li>
+                    <li className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      <strong className="text-[#00FF41] block mb-1">2. Stable Lighting</strong>
+                      Ensure bright, front-facing light so finger joints remain clearly visible.
+                    </li>
+                    <li className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      <strong className="text-[#00FF41] block mb-1">3. Clear Extensions</strong>
+                      Spread extended fingers distinctly to prevent joint overlap detection.
+                    </li>
+                  </ul>
+                </div>
+
               </div>
 
             </div>
@@ -1024,6 +1203,15 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
           </div>
         </div>
       )}
+
+      {/* PWA Install Modal */}
+      <PWAInstallModal
+        isOpen={pwa.showModal}
+        onClose={pwa.closeModal}
+        onInstall={pwa.triggerInstall}
+        isIOS={pwa.isIOS}
+        hasDeferredPrompt={pwa.hasDeferredPrompt}
+      />
 
     </div>
   );

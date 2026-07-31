@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import ConductorView from './components/ConductorView';
 import ListenerView from './components/ListenerView';
-import { Radio, Smartphone, Music, ChevronRight } from 'lucide-react';
+import { Radio, Smartphone, ChevronRight } from 'lucide-react';
 
 type AppRole = 'select' | 'conductor' | 'listener';
 
@@ -66,10 +66,6 @@ export default function App() {
           >
             {/* Top Branding Section */}
             <header className="text-center pt-8 md:pt-16 pb-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-[#00FF41] text-3xs font-mono uppercase tracking-widest mb-4 shadow-sm">
-                <Music className="w-3 h-3 text-[#00FF41]" />
-                <span>BETA v1.2</span>
-              </div>
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-none uppercase select-none">
                 BAND<span className="text-[#00FF41] drop-shadow-[0_0_15px_rgba(0,255,65,0.45)]">DAN</span>
               </h1>
@@ -95,7 +91,7 @@ export default function App() {
                   
                   <div className="flex flex-col gap-6 w-full">
                     <div className="bg-black/40 border border-white/5 group-hover:border-[#00FF41]/30 p-4 rounded-2xl w-14 h-14 flex items-center justify-center transition-all duration-300 group-hover:scale-105 shadow-inner">
-                      <Radio className="w-7 h-7 text-[#00FF41] group-hover:animate-pulse" />
+                      <Radio className="w-7 h-7 text-[#00FF41]" />
                     </div>
                     <div>
                       <h3 className="font-mono font-bold text-base md:text-lg text-white group-hover:text-[#00FF41] transition-colors uppercase tracking-wide">
