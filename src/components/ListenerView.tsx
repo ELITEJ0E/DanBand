@@ -349,7 +349,7 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
             )}
             <div className="flex items-center gap-2">
               <img 
-                src="/pwa-192x192.png" 
+                src="/icon.svg" 
                 alt="BandDan Icon" 
                 referrerPolicy="no-referrer"
                 className="w-6 h-6 rounded-lg border border-[#00FF41]/40 shrink-0 object-cover shadow-[0_0_10px_rgba(0,255,65,0.25)]" 

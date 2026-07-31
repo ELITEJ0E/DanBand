@@ -19,18 +19,21 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md bg-[#0A0D14] border border-[#00FF41]/30 rounded-3xl p-5 sm:p-6 shadow-[0_0_50px_rgba(0,255,65,0.15)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
+      <div 
+        className="relative w-full max-w-md bg-[#0A0D14] border border-[#00FF41]/30 rounded-3xl p-5 sm:p-6 shadow-[0_0_50px_rgba(0,255,65,0.15)] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Glow ambient background accents */}
         <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-[#00FF41]/10 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-[#00FF41]/5 blur-3xl pointer-events-none" />
 
-        {/* Close / Snooze Button */}
+        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
-          title="Remind me in 7 days"
+          title="Close"
         >
           <X className="w-4 h-4" />
         </button>
@@ -117,7 +120,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
               className="w-full py-3 bg-[#00FF41] hover:bg-[#22ff5a] active:scale-98 text-black font-mono font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 cursor-pointer shadow-[0_4px_20px_rgba(0,255,65,0.25)] flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4 text-black" />
-              <span>INSTALL APP NOW</span>
+              <span>INSTALL APP</span>
             </button>
           )}
 
@@ -129,13 +132,6 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
               <span>GOT IT, THANKS</span>
             </button>
           )}
-
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 text-3xs font-mono text-zinc-400 hover:text-white uppercase tracking-wider rounded-xl hover:bg-white/5 transition-all duration-200 cursor-pointer"
-          >
-            REMIND ME IN 7 DAYS
-          </button>
         </div>
 
       </div>

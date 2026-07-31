@@ -44,6 +44,17 @@ export function usePWAInstall() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!showModal) return;
+
+    const handlePopState = () => {
+      setShowModal(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showModal]);
+
   const snooze7Days = useCallback(() => {
     const nextRemind = Date.now() + SEVEN_DAYS_MS;
     localStorage.setItem(DISMISS_KEY, nextRemind.toString());
@@ -52,19 +63,24 @@ export function usePWAInstall() {
 
   const triggerInstall = useCallback(async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome === 'accepted') {
-        setShowModal(false);
-        setDeferredPrompt(null);
-      } else {
-        snooze7Days();
+      try {
+        await deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        if (choiceResult.outcome === 'accepted') {
+          setShowModal(false);
+          setDeferredPrompt(null);
+        } else {
+          // If they dismiss it, just close the modal
+          setShowModal(false);
+        }
+      } catch (err) {
+        console.error("Failed to prompt install", err);
       }
     } else {
       // Show modal modal instructions (iOS or manually clicked)
       setShowModal(true);
     }
-  }, [deferredPrompt, snooze7Days]);
+  }, [deferredPrompt]);
 
   const openModalManually = useCallback(() => {
     setShowModal(true);
