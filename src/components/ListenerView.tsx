@@ -348,7 +348,12 @@ export default function ListenerView({ onExit }: ListenerViewProps) {
               </button>
             )}
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#00FF41] animate-ping shrink-0" />
+              <img 
+                src="/pwa-192x192.png" 
+                alt="BandDan Icon" 
+                referrerPolicy="no-referrer"
+                className="w-6 h-6 rounded-lg border border-[#00FF41]/40 shrink-0 object-cover shadow-[0_0_10px_rgba(0,255,65,0.25)]" 
+              />
               <span className="text-xs font-mono font-extrabold tracking-tight text-white uppercase select-none">
                 BAND<span className="text-[#00FF41]">DAN</span>
               </span>

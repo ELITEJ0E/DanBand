@@ -462,7 +462,12 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
               </button>
             )}
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <div className="w-2 h-2 rounded-full bg-[#00FF41] shrink-0" />
+              <img 
+                src="/pwa-192x192.png" 
+                alt="BandDan Icon" 
+                referrerPolicy="no-referrer"
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg border border-[#00FF41]/40 shrink-0 object-cover shadow-[0_0_10px_rgba(0,255,65,0.25)]" 
+              />
               <h1 className="text-sm sm:text-base md:text-xl font-extrabold tracking-tighter text-white uppercase select-none truncate">
                 BAND<span className="text-[#00FF41]">DAN</span>
               </h1>
