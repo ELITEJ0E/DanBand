@@ -65,13 +65,7 @@ export default function App() {
             className="flex-1 flex flex-col justify-between max-w-lg md:max-w-4xl lg:max-w-5xl mx-auto w-full p-5 md:p-10 relative z-10"
           >
             {/* Top Branding Section */}
-            <header className="text-center pt-8 md:pt-16 pb-4 flex flex-col items-center">
-              <img 
-                src="/pwa-192x192.png" 
-                alt="BandDan Icon" 
-                referrerPolicy="no-referrer"
-                className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 border-[#00FF41]/40 shadow-[0_0_25px_rgba(0,255,65,0.3)] mb-4 object-cover" 
-              />
+            <header className="text-center pt-8 md:pt-16 pb-4">
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-none uppercase select-none">
                 BAND<span className="text-[#00FF41] drop-shadow-[0_0_15px_rgba(0,255,65,0.45)]">DAN</span>
               </h1>
