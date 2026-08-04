@@ -1,5 +1,12 @@
 import React from 'react';
-import { Download, Smartphone, Zap, ShieldCheck, X, Share, PlusSquare } from 'lucide-react';
+import { Download, Smartphone, Zap, ShieldCheck, Share, PlusSquare, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface PWAInstallModalProps {
   isOpen: boolean;
@@ -16,14 +23,9 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   isIOS,
   hasDeferredPrompt,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
-      <div 
-        className="relative w-full max-w-md bg-[#0A0D14] border border-[#00FF41]/30 rounded-3xl p-5 sm:p-6 shadow-[0_0_50px_rgba(0,255,65,0.15)] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent showCloseButton={false} className="w-[95vw] max-w-md bg-[#0A0D14] border border-[#00FF41]/30 rounded-[24px] p-5 sm:p-6 shadow-[0_0_50px_rgba(0,255,65,0.15)] overflow-hidden gap-0">
         
         {/* Glow ambient background accents */}
         <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-[#00FF41]/10 blur-3xl pointer-events-none" />
@@ -32,31 +34,33 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors cursor-pointer z-50"
           title="Close"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Header Icon & Title */}
-        <div className="flex items-center gap-3.5 mb-5">
-          <div className="w-12 h-12 rounded-2xl bg-[#00FF41]/10 border border-[#00FF41]/40 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(0,255,65,0.2)]">
-            <Download className="w-6 h-6 text-[#00FF41]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-extrabold tracking-tight text-white uppercase font-mono">
-                INSTALL BAND<span className="text-[#00FF41]">DAN</span>
-              </h2>
-              <span className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/30 text-[#00FF41] text-[8px] font-mono font-bold rounded-full">
-                PWA
-              </span>
+        <DialogHeader className="mb-5 text-left">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#00FF41]/10 border border-[#00FF41]/40 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(0,255,65,0.2)]">
+              <Download className="w-6 h-6 text-[#00FF41]" />
             </div>
-            <p className="text-3xs text-zinc-400 font-mono uppercase tracking-wider mt-0.5">
-              Add to Home Screen for Live Performance
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg font-extrabold tracking-tight text-white uppercase font-mono m-0 p-0">
+                  INSTALL BAND<span className="text-[#00FF41]">DAN</span>
+                </DialogTitle>
+                <span className="px-2 py-0.5 bg-[#00FF41]/10 border border-[#00FF41]/30 text-[#00FF41] text-[8px] font-mono font-bold rounded-full h-fit">
+                  PWA
+                </span>
+              </div>
+              <DialogDescription className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider mt-0.5 m-0 p-0">
+                Add to Home Screen for Live Performance
+              </DialogDescription>
+            </div>
           </div>
-        </div>
+        </DialogHeader>
 
         {/* Value Proposition List */}
         <div className="space-y-2.5 mb-6">
@@ -134,7 +138,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
           )}
         </div>
 
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

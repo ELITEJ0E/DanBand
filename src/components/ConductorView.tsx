@@ -36,6 +36,13 @@ import {
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { PWAInstallModal } from './PWAInstallModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface ConductorViewProps {
   onExit?: () => void;
@@ -817,24 +824,24 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
       </main>
 
       {/* PAIRING MODAL WIZARD */}
-      {pairingStep !== 'idle' && (
-        <div id="pairing_modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="bg-[#12121A]/90 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden flex flex-col shadow-[0_24px_64px_rgba(0,0,0,0.6)] relative">
-            <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            
-            <div className="p-4.5 bg-white/5 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wifi className="w-4 h-4 text-[#00FF41]" />
-                <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">PAIRING: {currentPairingName}</span>
-              </div>
-              <button 
-                onClick={cancelPairing}
-                className="text-zinc-500 hover:text-white transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/5"
-                title="Cancel Pairing"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Dialog open={pairingStep !== 'idle'} onOpenChange={(open) => !open && cancelPairing()}>
+        <DialogContent showCloseButton={false} className="w-[95vw] bg-[#12121A]/95 backdrop-blur-2xl border-white/10 rounded-3xl max-w-sm overflow-hidden flex flex-col shadow-[0_24px_64px_rgba(0,0,0,0.6)] p-0 gap-0">
+          <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          
+          <DialogHeader className="p-4.5 bg-white/5 border-b border-white/5 flex flex-row items-center justify-between m-0 space-y-0 text-left">
+            <div className="flex items-center gap-2">
+              <Wifi className="w-4 h-4 text-[#00FF41]" />
+              <DialogTitle className="text-xs font-mono font-bold text-white uppercase tracking-wider">PAIRING: {currentPairingName}</DialogTitle>
             </div>
+            <button 
+              onClick={cancelPairing}
+              className="text-zinc-500 hover:text-white transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/5"
+              title="Cancel Pairing"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <DialogDescription className="sr-only">Connect your bandmate device to sync live chords.</DialogDescription>
+          </DialogHeader>
 
             <div className="p-6 flex flex-col items-center text-center gap-5">
               
@@ -982,48 +989,37 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
               )}
 
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Interactive Modal / Dialog Component Guide for Conductors */}
-      {showCheatSheet && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in cursor-pointer" 
-          role="dialog" 
-          aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              closeCheatSheet();
-            }
-          }}
-        >
-          <div className="bg-[#0b0b12] border-2 border-[#00FF41]/20 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,255,65,0.12)] cursor-default">
-            {/* Header */}
-            <div className="p-5 border-b border-white/5 bg-black/40 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-lg">
-                  <HelpCircle className="w-5 h-5 text-[#00FF41]" />
-                </div>
-                <div>
-                  <h2 className="text-sm md:text-base font-extrabold tracking-tight text-white uppercase font-mono">
-                    [ CONDUCTOR GUIDE & REFERENCE ]
-                  </h2>
-                  <p className="text-4xs text-[#8E9299] font-mono uppercase tracking-widest mt-0.5">
-                    Interactive handbook for gesture detection and band connection
-                  </p>
-                </div>
+      <Dialog open={showCheatSheet} onOpenChange={(open) => !open && closeCheatSheet()}>
+        <DialogContent showCloseButton={false} className="w-[95vw] bg-[#0b0b12] border-2 border-[#00FF41]/20 rounded-3xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,255,65,0.12)] p-0 gap-0">
+          {/* Header */}
+          <DialogHeader className="p-5 border-b border-white/5 bg-black/40 flex flex-row items-center justify-between m-0 space-y-0 text-left">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-[#00FF41]/10 border border-[#00FF41]/20 rounded-lg">
+                <HelpCircle className="w-5 h-5 text-[#00FF41]" />
               </div>
-              <button
-                onClick={closeCheatSheet}
-                className="p-1.5 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition duration-200 cursor-pointer"
-                title="Close guide"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div>
+                <DialogTitle className="text-sm md:text-base font-extrabold tracking-tight text-white uppercase font-mono m-0 p-0">
+                  [ CONDUCTOR GUIDE & REFERENCE ]
+                </DialogTitle>
+                <DialogDescription className="text-4xs text-[#8E9299] font-mono uppercase tracking-widest mt-0.5 m-0 p-0">
+                  Interactive handbook for gesture detection and band connection
+                </DialogDescription>
+              </div>
             </div>
+            <button
+              onClick={closeCheatSheet}
+              className="p-1.5 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition duration-200 cursor-pointer"
+              title="Close guide"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </DialogHeader>
 
-            {/* Scrollable Content */}
+          {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 hover:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent scroll-smooth">
               
               {/* Mode Explanation Sections */}
@@ -1205,9 +1201,8 @@ export default function ConductorView({ onExit }: ConductorViewProps) {
                 GOT IT
               </button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* PWA Install Modal */}
       <PWAInstallModal
